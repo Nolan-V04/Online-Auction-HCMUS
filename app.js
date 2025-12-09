@@ -1,43 +1,23 @@
-import express from 'express';
-import { engine } from 'express-handlebars';
+require("dotenv").config();
+const express = require("express");
+const cookieParser = require("cookie-parser");
+const path = require("path");
 
-import adminCategoryRouter from './routes/admin-category.route.js';
+const authRoutes = require("./routes/auth");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+app.use(express.static("public"));
 
-app.engine('handlebars', engine());
-app.set('view engine', 'handlebars');
-app.set('views', './views');
+app.set("view engine", "ejs");
+app.set("views", path.join(__dirname, "views"));
 
-// app.use('/static', express.static('static'));
-// app.use(express.urlencoded({
-//   extended: true
-// }));
+app.use("/", authRoutes);
 
-app.get('/', function (req, res) {
-  const data = {
-    name: 'John Doe',
-    age: 30,
-    occupation: 'Developer'
-  };
-  res.render('home', data);
+app.get("/dashboard", (req, res) => {
+  if (!req.cookies.userId) return res.redirect("/login");
+  res.render("pages/dashboard", { title: "Dashboard" });
 });
 
-app.get('/account/signup', function (req, res) {
-  res.render('vwAccount/signup');
-});
-
-app.get('/account/signin', function (req, res) {
-  res.render('vwAccount/signin');
-});
-
-app.get('/products/byCat', function (req, res) {
-  res.render('vwProducts/byCat');
-});
-
-app.use('/admin/categories', adminCategoryRouter);
-
-app.listen(PORT, function () {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+app.listen(3000, () => console.log("Server chạy tại http://localhost:3000"));
