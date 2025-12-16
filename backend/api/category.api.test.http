@@ -1,0 +1,32 @@
+### Fetch all categories
+GET http://localhost:3000/api/categories
+apiKey: 12345ABCDE
+Accept: application/json
+
+### Fetch category by ID
+GET http://localhost:3000/api/categories/99
+apiKey: 12345ABCDE
+Accept: application/json
+
+### Create a new category
+POST http://localhost:3000/api/categories
+apiKey: 12345ABCDE
+Content-Type: application/json
+
+{
+  "catname": "New Category 1"
+}
+
+### Delete a category
+DELETE http://localhost:3000/api/categories/31 
+apiKey: 12345ABCDE
+Accept: application/json
+
+### Update a category
+PATCH http://localhost:3000/api/categories/29
+apiKey: 12345ABCDE
+Content-Type: application/json
+
+{
+  "catname": "Updated Category Name"
+}

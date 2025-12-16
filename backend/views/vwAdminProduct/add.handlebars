@@ -1,0 +1,107 @@
+{{#section 'css'}}
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet" />
+<link href="https://releases.transloadit.com/uppy/v5.1.11/uppy.min.css" rel="stylesheet">
+{{/section}}
+
+{{#section 'js'}}
+<script src="https://cdn.jsdelivr.net/npm/cleave.js@1.6.0/dist/cleave.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+<script>
+  new Cleave('#txtPrice', {
+    numeral: true,
+    numeralThousandsGroupStyle: 'thousand'
+  });
+  new Cleave('#txtQuantity', {
+    numeral: true,
+    numeralThousandsGroupStyle: 'thousand'
+  });
+  const quill = new Quill('#editor', {
+    theme: 'snow'
+  });
+
+  document.querySelector('#fromAddProduct').addEventListener('submit', function (e) {
+    document.querySelector('#txtFullDes').value = quill.root.innerHTML;
+  });
+</script>
+<script type="module">
+  import { Uppy, Dashboard, XHRUpload } from "https://releases.transloadit.com/uppy/v5.1.11/uppy.min.mjs"
+  const uppy = new Uppy()
+  uppy.use(Dashboard, { target: '#uppy', inline: true })
+  uppy.use(XHRUpload, {
+    endpoint: '/admin/products/upload',
+    fieldName: 'photo',
+    formData: true
+  });
+
+  // uppy.on('complete', function (result) {
+  //  console.log(result);
+  // });
+
+  let uploaded_photos = [];
+  uppy.on('upload-success', function (file, response) {
+    if(response.body && Array.isArray(response.body.files)) {
+     response.body.files.forEach(function(f) {
+        uploaded_photos.push(f.filename);
+      });
+    }
+
+    document.querySelector('#txtPhotos').value = JSON.stringify(uploaded_photos);
+  });
+</script>
+{{/section}}
+
+<form id="fromAddProduct" action="" method="post">
+  <div class="card">
+    <h5 class="card-header">Add Product</h5>
+    <div class="card-body">
+      <div class="mb-3">
+        <label for="txtProname" class="form-label">Product Name</label>
+        <input type="text" class="form-control" id="txtProname" name="proname" autofocus>
+      </div>
+      <div class="mb-3">
+        <label for="selCatId" class="form-label">Category</label>
+        <select name="catid" id="selCatId" class="form-select">
+          {{#each categories}}
+          <option value="{{catid}}">{{catname}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <div class="mb-3">
+        <label for="txtPrice" class="form-label">Price</label>
+        <input type="text" class="form-control" id="txtPrice" name="price">
+      </div>
+      <div class="mb-3">
+        <label for="txtQuantity" class="form-label">Quantity</label>
+        <input type="text" class="form-control" id="txtQuantity" name="quantity">
+      </div>
+      <div class="mb-3">
+        <label for="txtTinyDes" class="form-label">Description</label>
+        <input type="text" class="form-control" id="txtTinyDes" name="tinydes">
+      </div>
+      <div class="mb-3">
+        <label for="editor" class="form-label">Full description</label>
+        <input type="hidden" class="form-control" id="txtFullDes" name="fulldes">
+        <div id="editor">
+          <p>Hello World!</p>
+          <p>Some initial <strong>bold</strong> text</p>
+          <p><br /></p>
+        </div>
+      </div>
+      <div class="mb-3">
+        <label for="uppy" class="form-label">Photos</label>
+        <div id="uppy"></div>
+        <input type="hidden" id="txtPhotos" name="photos">
+      </div>
+    </div>
+    <div class="card-footer text-muted">
+      <a href="/admin/products" class="btn btn-outline-success">
+        <i class="bi bi-arrow-left"></i>
+        Back
+      </a>
+      <button type="submit" class="btn btn-primary">
+        <i class="bi bi-check2"></i>
+        Save
+      </button>
+    </div>
+  </div>
+</form>
