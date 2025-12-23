@@ -3,89 +3,8 @@ import { useLocation } from 'react-router-dom';
 import { fetchProducts } from '@/services/product.service.jsx';
 import { fetchCategoryById } from '@/services/category.service.jsx';
 
-/* ================= Utils ================= */
+import { handleView, formatPrice, timeLeftLabel, ProductCard } from '@/services/product.service.jsx';
 
-function formatPrice(v) {
-  return new Intl.NumberFormat('vi-VN').format(v) + ' ₫';
-}
-
-function timeLeftLabel(endTime) {
-  if (!endTime) return null;
-  const end = new Date(endTime);
-  const diff = end - new Date();
-
-  if (diff <= 0) return 'Ended';
-
-  const hrs = Math.floor(diff / (1000 * 60 * 60));
-  const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-  if (hrs >= 24) return `${Math.floor(hrs / 24)}d ${hrs % 24}h`;
-  if (hrs > 0) return `${hrs}h ${mins}m`;
-  return `${mins}m`;
-}
-
-/* ================= Product Card ================= */
-
-function ProductCard({ p, onView, onAdd }) {
-  const tl = timeLeftLabel(p.end_time || p.endtime || p.endTime);
-
-  return (
-    <div className="bg-white border border-[#E2E8F0] rounded-lg shadow-sm overflow-hidden relative">
-      {tl && (
-        <div className="absolute top-2 left-2 bg-white/80 px-2 py-1 rounded text-xs font-medium">
-          {tl}
-        </div>
-      )}
-
-      {p.bid_count !== undefined && (
-        <div className="absolute top-2 right-2 bg-white/80 px-2 py-1 rounded text-xs font-medium">
-          {p.bid_count} bids
-        </div>
-      )}
-
-      <div className="h-44 bg-gray-100 flex items-center justify-center">
-        <img
-          src={`/static/imgs/sp/${p.proid}/main_thumbs.jpg`}
-          alt={p.proname}
-          className="object-cover h-full w-full"
-          onError={(e) => (e.target.src = '/vite.svg')}
-        />
-      </div>
-
-      <div className="p-3">
-        <h3 className="text-sm font-medium text-[#1E293B] truncate">
-          {p.proname}
-        </h3>
-        <p className="text-xs text-gray-500 mt-1 line-clamp-2">
-          {p.tinydes || p.proname}
-        </p>
-
-        <div className="mt-3 flex items-center justify-between">
-          <div className="text-red-600 font-semibold">
-            {formatPrice(p.price)}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => onView(p)}
-              className="text-sm text-blue-600"
-            >
-              View details
-            </button>
-            <button
-              onClick={() => onAdd(p)}
-              className="bg-blue-600 text-white px-3 py-1 rounded text-sm"
-            >
-              Add to cart
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ================= Products List ================= */
 
 export default function ProductsList() {
   const location = useLocation();
@@ -176,9 +95,6 @@ export default function ProductsList() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  function handleView(p) {
-    window.location.href = `/products/detail/${p.proid}`;
-  }
 
   function handleAdd(p) {
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
