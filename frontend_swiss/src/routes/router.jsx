@@ -9,6 +9,8 @@ import ListCategories from "@/pages/admin/categories/ListCategories.jsx";
 import AddCategory from "@/pages/admin/categories/AddCategory.jsx";
 import EditCategory from "@/pages/admin/categories/EditCategory.jsx";
 import RootLayout from "@/pages/shared/RootLayout.jsx";
+import Login from "@/pages/shared/Login.jsx";
+import ProductsList from "@/pages/guest/ProductsList.jsx";
 
 const router = createBrowserRouter([
   {
@@ -17,6 +19,14 @@ const router = createBrowserRouter([
       {
         path: "/",
         element: <App />,
+      },
+      {
+        path: "/products",
+        element: <ProductsList />,
+      },
+      {
+        path: "/login",
+        element: <Login />,
       },
       {
         path: "/admin",

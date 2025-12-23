@@ -30,3 +30,13 @@ Content-Type: application/json
 {
   "catname": "Updated Category Name"
 }
+
+### Fetch category tree (with counts)
+GET http://localhost:3000/api/categories/tree
+apiKey: 12345ABCDE
+Accept: application/json
+
+### Fetch category tree (no counts)
+GET http://localhost:3000/api/categories/tree?counts=false
+apiKey: 12345ABCDE
+Accept: application/json

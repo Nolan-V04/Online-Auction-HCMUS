@@ -44,3 +44,28 @@ export function findAllWithCat() {
     .select('p.*', 'c.catname')
     .orderBy('p.proid');
 }
+
+// Top N products closing soon (require products.end_time) — defined as ending within next 2 weeks
+export function findTopEnding(limit = 5) {
+  // Use PostgreSQL now() and interval '2 weeks' to compute the range on the DB side
+  return db('products')
+    .whereNotNull('end_time')
+    .andWhere('end_time', '>=', db.raw('now()'))
+    .andWhere('end_time', '<=', db.raw("now() + interval '2 weeks'"))
+    .orderBy('end_time', 'asc')
+    .limit(limit);
+}
+
+// Top N products by number of bids (uses bids table)
+export function findTopByBids(limit = 5) {
+  return db('products')
+    .orderBy('bid_count', 'desc')
+    .limit(limit);
+}
+
+// Top N products by price
+export function findTopByPrice(limit = 5) {
+  return db('products')
+    .orderBy('price', 'desc')
+    .limit(limit);
+}

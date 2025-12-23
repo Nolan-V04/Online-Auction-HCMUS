@@ -27,16 +27,16 @@ app.use(session({
   }
 }))
 
-app.engine('handlebars', engine({
-  helpers: {
-    format_currency(value) {
-      return new Intl.NumberFormat('en-US').format(value);
-    },
-    section: expressHandlebarsSections()
-  }
-}));
-app.set('view engine', 'handlebars');
-app.set('views', './views');
+// app.engine('handlebars', engine({
+//   helpers: {
+//     format_currency(value) {
+//       return new Intl.NumberFormat('en-US').format(value);
+//     },
+//     section: expressHandlebarsSections()
+//   }
+// }));
+// app.set('view engine', 'handlebars');
+// app.set('views', './views');
 
 app.use('/static', express.static('static'));
 app.use(express.urlencoded({
@@ -50,32 +50,32 @@ app.use(function (req, res, next) {
   next();
 });
 
-import * as categoryService from './services/category.service.js';
-app.use(async function (req, res, next) {
-  const list = await categoryService.findAll();
-  res.locals.lcCategories = list;
-  next();
-});
+// import * as categoryService from './services/category.service.js';
+// app.use(async function (req, res, next) {
+//   const list = await categoryService.findAll();
+//   res.locals.lcCategories = list;
+//   next();
+// });
 
-app.get('/', function (req, res) {
+// app.get('/', function (req, res) {
 
-  if (req.session.views) {
-    req.session.views++;
-  } else {
-    req.session.views = 1;
-  }
+//   if (req.session.views) {
+//     req.session.views++;
+//   } else {
+//     req.session.views = 1;
+//   }
 
-  const data = {
-    name: 'John Doe',
-    age: 30,
-    occupation: 'Developer'
-  };
-  res.render('home', data);
-});
+//   const data = {
+//     name: 'John Doe',
+//     age: 30,
+//     occupation: 'Developer'
+//   };
+//   res.render('home', data);
+// });
 
-app.get('/view-session', function (req, res) {
-  res.send(`Views: ${req.session.views}`);
-});
+// app.get('/view-session', function (req, res) {
+//   res.send(`Views: ${req.session.views}`);
+// });
 
 // app.get('/account/signup', function (req, res) {
 //   res.render('vwAccount/signup');
@@ -89,15 +89,18 @@ app.get('/view-session', function (req, res) {
 //   res.render('vwProducts/byCat');
 // });
 
-app.use('/account', accountRouter);
-app.use('/products', productRouter);
-app.use('/admin/categories', isAuth, isAdmin, adminCategoryRouter);
-// app.use('/admin/products', isAuth, isAdmin, adminProductRouter);
-app.use('/admin/products', adminProductRouter);
+// app.use('/account', accountRouter);
+// app.use('/products', productRouter);
+// app.use('/admin/categories', isAuth, isAdmin, adminCategoryRouter);
+// // app.use('/admin/products', isAuth, isAdmin, adminProductRouter);
+// app.use('/admin/products', adminProductRouter);
 
 import { isApiAuth } from './middlewares/api-auth.mdw.js';
 import apiCategoryRouter from './api/category.api.js';
 app.use('/api/categories', isApiAuth, apiCategoryRouter);
+
+import apiProductRouter from './api/product.api.js';
+app.use('/api/products', isApiAuth, apiProductRouter);
 
 app.use(function (req, res) {
   res.status(404).render('404');

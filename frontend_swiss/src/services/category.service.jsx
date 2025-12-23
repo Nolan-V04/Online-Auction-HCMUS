@@ -50,3 +50,16 @@ export async function updateCategory(catid, data) {
     throw new Error("Failed to update category");
   }
 }
+
+export async function fetchCategoryTree() {
+  const res = await instance.get('/categories/tree');
+  if (res.status === 200) {
+    // API returns { result_code, result_message, categories }
+    if (res.data && Array.isArray(res.data.categories)) return res.data.categories;
+    // Backwards-compatible: maybe the endpoint returned an array directly
+    if (Array.isArray(res.data)) return res.data;
+    throw new Error('Unexpected response from category tree: ' + JSON.stringify(res.data));
+  } else {
+    throw new Error('Failed to fetch category tree');
+  }
+}

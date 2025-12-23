@@ -12,6 +12,18 @@ router.get('/', async function (req, res) {
   });
 });
 
+// category tree: GET /api/categories/tree?counts=true|false
+router.get('/tree', async function (req, res) {
+  try {
+    const counts = req.query.counts !== 'false';
+    const tree = await categoryService.findTree(counts);
+    res.json({ result_code: 0, result_message: 'Success', categories: tree });
+  } catch (err) {
+    console.error('/api/categories/tree error', err);
+    res.status(500).json({ result_code: -1, result_message: err.message });
+  }
+});
+
 router.get('/:id', async function (req, res) {
   const id = req.params.id;
   const category = await categoryService.findById(id);

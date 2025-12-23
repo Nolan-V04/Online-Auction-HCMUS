@@ -1,0 +1,24 @@
+### Fetch Top 5 ending soon
+GET http://localhost:3000/api/products/top-ending
+apiKey: 12345ABCDE
+Accept: application/json
+
+### Fetch Top 5 by bids (default: uses stored `products.bid_count`)
+GET http://localhost:3000/api/products/top-bids
+apiKey: 12345ABCDE
+Accept: application/json
+
+### Fetch Top 5 by price
+GET http://localhost:3000/api/products/top-price
+apiKey: 12345ABCDE
+Accept: application/json
+
+### CURL equivalents (for terminal)
+# curl -H "apiKey: 12345ABCDE" http://localhost:3000/api/products/top-ending
+# curl -H "apiKey: 12345ABCDE" http://localhost:3000/api/products/top-bids
+# curl -H "apiKey: 12345ABCDE" http://localhost:3000/api/products/top-price
+
+### List products by category (page/limit)
+GET http://localhost:3000/api/products?catid=1&page=1&limit=20
+apiKey: 12345ABCDE
+Accept: application/json
