@@ -1,0 +1,4 @@
+// test user sign-in with valid API key
+GET http://localhost:3000/api/signin
+apiKey: 12345ABCDE
+Accept: application/json

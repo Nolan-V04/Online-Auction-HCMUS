@@ -57,4 +57,34 @@ router.get('/', async (req, res) => {
   }
 });
 
+router.get('/detail/:proid', async (req, res) => {
+  try {
+    const id = req.params.proid;
+    const product = await productService.findById(id);
+    if (product) {
+      res.json({ result_code: 0, result_message: 'Success', product: product });
+    } else {
+      res.status(404).json({ result_code: -1, result_message: 'Product not found' });
+    }
+  } catch (err) {
+    console.error('/api/products/detail/:proid error', err);
+    res.status(500).json({ result_code: -1, result_message: err.message, debug: process.env.NODE_ENV !== 'production' ? err.stack : undefined });
+  }
+});
+
+router.get('/related/:proid', async (req, res) => {
+  try {
+    const id = req.params.proid;
+    const related = await productService.findRelated(id, 5);
+    if (related) {
+      res.json({ result_code: 0, result_message: 'Success', products: related });
+    } else {
+      res.status(404).json({ result_code: -1, result_message: 'Product not found' });
+    }
+  } catch (err) {
+    console.error('/api/products/related/:proid error', err);
+    res.status(500).json({ result_code: -1, result_message: err.message, debug: process.env.NODE_ENV !== 'production' ? err.stack : undefined });
+  }
+});
+
 export default router;

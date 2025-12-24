@@ -7,18 +7,6 @@ export default function Navbar({ onToggleMenu }) {
   const [openDropdown, setOpenDropdown] = useState(null);
   const [openSubDropdown, setOpenSubDropdown] = useState(null);
 
-  const electronics = {
-    'Điện thoại': ['iPhone', 'Samsung', 'Xiaomi', 'Oppo'],
-    'Laptop': ['MacBook', 'Dell', 'HP', 'Asus'],
-    'Phụ kiện': ['Tai nghe', 'Sạc dự phòng', 'Chuột', 'Bàn phím']
-  };
-
-  const fashion = {
-    'Nam': ['Áo nam', 'Quần nam', 'Giày nam', 'Phụ kiện nam'],
-    'Nữ': ['Áo nữ', 'Quần nữ', 'Váy', 'Giày nữ'],
-    'Trẻ em': ['Áo trẻ em', 'Quần trẻ em', 'Giày trẻ em']
-  };
-
   const toggleDropdown = (name) => {
     setOpenDropdown(openDropdown === name ? null : name);
     setOpenSubDropdown(null);
@@ -32,7 +20,12 @@ export default function Navbar({ onToggleMenu }) {
 
   const handleLogin = () => {
     setOpenDropdown(null);
-    navigate('/login');
+    navigate('/signin');
+  };
+
+  const handleSignup = () => {
+    setOpenDropdown(null);
+    navigate('/signup');
   };
 
   const handleLogout = () => {
@@ -72,7 +65,9 @@ export default function Navbar({ onToggleMenu }) {
                         >
                         Đăng nhập
                         </button>
-                        <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                        <button 
+                        onClick={handleSignup}
+                        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
                         Đăng ký
                         </button>
                     </div>

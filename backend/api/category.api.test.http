@@ -4,7 +4,7 @@ apiKey: 12345ABCDE
 Accept: application/json
 
 ### Fetch category by ID
-GET http://localhost:3000/api/categories/99
+GET http://localhost:3000/api/categories/32
 apiKey: 12345ABCDE
 Accept: application/json
 
@@ -18,7 +18,7 @@ Content-Type: application/json
 }
 
 ### Delete a category
-DELETE http://localhost:3000/api/categories/31 
+DELETE http://localhost:3000/api/categories/32
 apiKey: 12345ABCDE
 Accept: application/json
 

@@ -28,6 +28,25 @@ export async function fetchProducts({ catid, page = 1, limit = 8 } = {}) {
   throw new Error('Failed to fetch products');
 }
 
+export async function fetchProductById(proid) {
+  if (!proid) {
+    throw new Error('Product id is required');
+  }
+
+  const res = await instance.get(`/products/detail/${proid}`);
+  return res.data.product;
+}
+
+export async function fetchRelatedProducts(proid) {
+  if (!proid) {
+    throw new Error('Product id is required');
+  }
+
+  const res = await instance.get(`/products/related/${proid}`);
+  return res.data.products || [];
+}
+
+
 export async function handleView(p) {
     window.location.href = `/products/detail/${p.proid}`;
 }

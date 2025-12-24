@@ -22,3 +22,13 @@ Accept: application/json
 GET http://localhost:3000/api/products?catid=1&page=1&limit=20
 apiKey: 12345ABCDE
 Accept: application/json
+
+### Featch product by ID
+GET http://localhost:3000/api/products/detail/1
+apiKey: 12345ABCDE
+Accept: application/json
+
+### fetch related products
+GET http://localhost:3000/api/products/related/31
+apiKey: 12345ABCDE
+Accept: application/json

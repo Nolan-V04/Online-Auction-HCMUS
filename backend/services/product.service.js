@@ -12,6 +12,24 @@ export function findById(id) {
   return db('products').where('proid', id).first();
 }
 
+export async function findRelated(proid, limit = 5) {
+  const product = await db('products')
+    .select('catid')
+    .where('proid', proid)
+    .first();
+
+  if (!product) {
+    return [];
+  }
+
+  return db('products')
+    .where('catid', product.catid)
+    .andWhere('proid', '<>', proid)
+    .orderByRaw('RANDOM()')
+    .limit(limit);
+}
+
+
 export function del(id) {
   return db('products').where('proid', id).del();
 }
@@ -47,12 +65,10 @@ export function findAllWithCat() {
 
 // Top N products closing soon (require products.end_time) — defined as ending within next 2 weeks
 export function findTopEnding(limit = 5) {
-  // Use PostgreSQL now() and interval '2 weeks' to compute the range on the DB side
   return db('products')
     .whereNotNull('end_time')
-    .andWhere('end_time', '>=', db.raw('now()'))
-    .andWhere('end_time', '<=', db.raw("now() + interval '2 weeks'"))
-    .orderBy('end_time', 'asc')
+    .where('end_time', '>', db.raw('now()'))  
+    .orderBy('end_time', 'asc')         
     .limit(limit);
 }
 

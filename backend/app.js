@@ -3,11 +3,6 @@ import { engine } from 'express-handlebars';
 import expressHandlebarsSections from 'express-handlebars-sections';
 import session from 'express-session';
 
-import adminCategoryRouter from './routes/admin-category.route.js';
-import adminProductRouter from './routes/admin-product.route.js';
-import productRouter from './routes/product.route.js';
-import accountRouter from './routes/account.route.js';
-
 import { isAdmin, isAuth } from './middlewares/auth.mdw.js';
 
 import cors from 'cors';

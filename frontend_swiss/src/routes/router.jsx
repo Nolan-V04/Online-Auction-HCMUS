@@ -4,13 +4,15 @@ import * as categoryService from "@/services/category.service.jsx";
 
 import App from '@/App.jsx'
 
-import AdminLayout from "@/pages/shared/AdminLayout.jsx";
+import AdminLayout from "@/pages/admin/AdminLayout.jsx";
 import ListCategories from "@/pages/admin/categories/ListCategories.jsx";
 import AddCategory from "@/pages/admin/categories/AddCategory.jsx";
 import EditCategory from "@/pages/admin/categories/EditCategory.jsx";
 import RootLayout from "@/pages/shared/RootLayout.jsx";
-import Login from "@/pages/shared/Login.jsx";
+import Login from "@/pages/shared/signin.jsx";
 import ProductsList from "@/pages/guest/ProductsList.jsx";
+import Signup from "@/pages/shared/Signup"; 
+import ProductDetail from "@/pages/shared/itemdetails.jsx";
 
 const router = createBrowserRouter([
   {
@@ -25,8 +27,16 @@ const router = createBrowserRouter([
         element: <ProductsList />,
       },
       {
-        path: "/login",
+        path: "/signin",
         element: <Login />,
+      },
+      {
+        path: "/signup",
+        element: <Signup />,
+      },
+      {
+        path: "/products/detail/:proid",
+        element: <ProductDetail />,
       },
       {
         path: "/admin",
