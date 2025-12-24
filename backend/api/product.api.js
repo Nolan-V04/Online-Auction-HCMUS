@@ -60,7 +60,7 @@ router.get('/', async (req, res) => {
 router.get('/detail/:proid', async (req, res) => {
   try {
     const id = req.params.proid;
-    const product = await productService.findById(id);
+    const product = await productService.findByIdWithHighestBidder(id);
     if (product) {
       res.json({ result_code: 0, result_message: 'Success', product: product });
     } else {

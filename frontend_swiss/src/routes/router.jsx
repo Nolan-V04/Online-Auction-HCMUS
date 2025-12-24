@@ -8,11 +8,17 @@ import AdminLayout from "@/pages/admin/AdminLayout.jsx";
 import ListCategories from "@/pages/admin/categories/ListCategories.jsx";
 import AddCategory from "@/pages/admin/categories/AddCategory.jsx";
 import EditCategory from "@/pages/admin/categories/EditCategory.jsx";
+import AdminHome from "@/pages/admin/AdminHome.jsx";
+import AdminProducts from "@/pages/admin/AdminProducts.jsx";
+import AdminUsers from "@/pages/admin/AdminUsers.jsx";
+import AdminSellerRequests from "@/pages/admin/AdminSellerRequests.jsx";
 import RootLayout from "@/pages/shared/RootLayout.jsx";
 import Login from "@/pages/shared/signin.jsx";
 import ProductsList from "@/pages/guest/ProductsList.jsx";
 import Signup from "@/pages/shared/Signup"; 
 import ProductDetail from "@/pages/shared/itemdetails.jsx";
+import WatchlistPage from "@/pages/shared/WatchlistPage.jsx";
+import ProfilePage from "@/pages/shared/Profile.jsx";
 
 const router = createBrowserRouter([
   {
@@ -39,9 +45,18 @@ const router = createBrowserRouter([
         element: <ProductDetail />,
       },
       {
+        path: "/watchlist",
+        element: <WatchlistPage />,
+      },
+      {
+        path: "/profile",
+        element: <ProfilePage />,
+      },
+      {
         path: "/admin",
         element: <AdminLayout />,
         children: [
+          { path: '', element: <AdminHome /> },
           {
             path: "categories",
             loader: async function () {
@@ -62,36 +77,11 @@ const router = createBrowserRouter([
             },
             element: <ListCategories />,
           },
-          {
-            path: "categories/add",
-            element: <AddCategory />,
-            action: async ({ request }) => {
-              const formData = await request.formData();
-              const data = Object.fromEntries(formData.entries());
-
-              if (data.catname.length === 0) {
-                return { error: "Category name is required." };
-              }
-
-              const res = await categoryService.createCategory(data);
-              return res.category;
-            },
-          },
-          {
-            path: "categories/edit/:catid",
-            element: <EditCategory />,
-            loader: async function ({ params }) {
-              return {
-                record: await categoryService.fetchCategoryById(params.catid)
-              };
-            },
-            action: async function ({ request, params }) {
-              const formData = await request.formData();
-              const data = Object.fromEntries(formData.entries());
-              await categoryService.updateCategory(params.catid, data);
-              return redirect('/admin/categories');
-            },
-          }
+          { path: "categories/add", element: <AddCategory /> },
+          { path: "categories/edit/:catid", element: <EditCategory /> },
+          { path: "products", element: <AdminProducts /> },
+          { path: "users", element: <AdminUsers /> },
+          { path: "seller-requests", element: <AdminSellerRequests /> }
         ]
       }
     ]

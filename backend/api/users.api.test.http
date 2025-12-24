@@ -1,4 +1,69 @@
-// test user sign-in with valid API key
-GET http://localhost:3000/api/signin
+### Request OTP (registration)
+POST http://localhost:3000/api/users/request-otp
 apiKey: 12345ABCDE
+Content-Type: application/json
 Accept: application/json
+
+{
+	"username": "bidder_demo_001",
+	"password": "P@ssw0rd123",
+	"name": "Nguyen Van A",
+	"email": "bidder.demo001@example.com",
+	"dob": "1995-05-20",
+	"address": "TP. Ho Chi Minh",
+	"recaptchaToken": "dev-ok"
+}
+
+### Request OTP fails (bad reCAPTCHA)
+POST http://localhost:3000/api/users/request-otp
+apiKey: 12345ABCDE
+Content-Type: application/json
+Accept: application/json
+
+{
+	"username": "bidder_demo_bad",
+	"password": "P@ssw0rd123",
+	"name": "Nguyen Van B",
+	"email": "bidder.demo.bad@example.com",
+	"dob": "1990-01-01",
+	"address": "Ha Noi",
+	"recaptchaToken": "bad-token"
+}
+
+### Request OTP fails (duplicate email)
+POST http://localhost:3000/api/users/request-otp
+apiKey: 12345ABCDE
+Content-Type: application/json
+Accept: application/json
+
+{
+	"username": "bidder_demo_dup",
+	"password": "P@ssw0rd123",
+	"name": "Nguyen Van C",
+	"email": "bidder.demo001@example.com",
+	"dob": "1992-02-02",
+	"address": "Da Nang",
+	"recaptchaToken": "dev-ok"
+}
+
+### Verify OTP (replace OTP with value from request-otp response `otp_preview` in dev)
+POST http://localhost:3000/api/users/verify-otp
+apiKey: 12345ABCDE
+Content-Type: application/json
+Accept: application/json
+
+{
+	"email": "bidder.demo001@example.com",
+	"otp": "123456"
+}
+
+### Verify OTP fails (wrong OTP)
+POST http://localhost:3000/api/users/verify-otp
+apiKey: 12345ABCDE
+Content-Type: application/json
+Accept: application/json
+
+{
+	"email": "bidder.demo001@example.com",
+	"otp": "000000"
+}

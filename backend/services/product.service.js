@@ -12,6 +12,15 @@ export function findById(id) {
   return db('products').where('proid', id).first();
 }
 
+// Find product with highest bidder info joined
+export function findByIdWithHighestBidder(id) {
+  return db('products as p')
+    .leftJoin('users as u', 'p.highest_bidder', 'u.id')
+    .select('p.*', 'u.username as highest_bidder_username', 'u.name as highest_bidder_name')
+    .where('p.proid', id)
+    .first();
+}
+
 export async function findRelated(proid, limit = 5) {
   const product = await db('products')
     .select('catid')
@@ -84,4 +93,17 @@ export function findTopByPrice(limit = 5) {
   return db('products')
     .orderBy('price', 'desc')
     .limit(limit);
+}
+
+// Find products by array of IDs with pagination
+export function findByIds(ids, limit, offset) {
+  if (!ids || ids.length === 0) {
+    return [];
+  }
+  
+  return db('products')
+    .whereIn('proid', ids)
+    .orderBy('proid', 'desc')
+    .limit(limit)
+    .offset(offset);
 }

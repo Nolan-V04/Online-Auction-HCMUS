@@ -1,0 +1,21 @@
+# Watchlist API Test
+
+### Get watchlist (IDs only)
+GET http://localhost:3000/api/watchlist
+Cookie: connect.sid=YOUR_SESSION_COOKIE
+
+### Get watchlist with products (page 1)
+GET http://localhost:3000/api/watchlist/products?page=1&limit=8
+Cookie: connect.sid=YOUR_SESSION_COOKIE
+
+### Add product to watchlist
+POST http://localhost:3000/api/watchlist/add/1
+Cookie: connect.sid=YOUR_SESSION_COOKIE
+
+### Remove product from watchlist
+DELETE http://localhost:3000/api/watchlist/remove/1
+Cookie: connect.sid=YOUR_SESSION_COOKIE
+
+### Check if product is in watchlist
+GET http://localhost:3000/api/watchlist/check/1
+Cookie: connect.sid=YOUR_SESSION_COOKIE

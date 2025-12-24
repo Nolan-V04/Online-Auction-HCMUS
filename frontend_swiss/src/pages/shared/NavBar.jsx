@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, User, Settings, LogOut, Package, Heart } from 'lucide-react';
+import { ChevronDown, User, UserCircle, Settings, LogOut, Package, Heart } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Navbar({ onToggleMenu }) {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { isLoggedIn, user, logout } = useAuth();
   const [openDropdown, setOpenDropdown] = useState(null);
   const [openSubDropdown, setOpenSubDropdown] = useState(null);
 
@@ -28,9 +29,15 @@ export default function Navbar({ onToggleMenu }) {
     navigate('/signup');
   };
 
-  const handleLogout = () => {
-    setIsLoggedIn(false);
+  const handleLogout = async () => {
+    await logout();
     setOpenDropdown(null);
+    navigate('/');
+  };
+
+  const handleProfile = () => {
+    setOpenDropdown(null);
+    navigate('/profile');
   };
 
   return (
@@ -86,9 +93,19 @@ export default function Navbar({ onToggleMenu }) {
                         {openDropdown === 'user' && (
                         <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-lg shadow-lg border z-50">
                             <div className="px-4 py-3 border-b">
-                            <p className="font-medium text-gray-800">Nguyễn Văn A</p>
-                            <p className="text-sm text-gray-500">user@example.com</p>
+                          <p className="font-medium text-gray-800">{user?.name || user?.username}</p>
+                          <p className="text-sm text-gray-500">{user?.email}</p>
                             </div>
+                            <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleProfile();
+                            }}
+                            className="flex items-center space-x-2 px-4 py-3 hover:bg-gray-50 w-full text-left"
+                            >
+                            <UserCircle className="w-4 h-4 text-gray-600" />
+                            <span className="text-gray-700">Quản lý thông tin cá nhân</span>
+                            </button>
                             <a
                             href="#"
                             className="flex items-center space-x-2 px-4 py-3 hover:bg-gray-50"
@@ -96,13 +113,17 @@ export default function Navbar({ onToggleMenu }) {
                             <Package className="w-4 h-4 text-gray-600" />
                             <span className="text-gray-700">Đơn hàng</span>
                             </a>
-                            <a
-                            href="#"
-                            className="flex items-center space-x-2 px-4 py-3 hover:bg-gray-50"
+                            <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenDropdown(null);
+                              navigate('/watchlist');
+                            }}
+                            className="flex items-center space-x-2 px-4 py-3 hover:bg-gray-50 w-full text-left"
                             >
                             <Heart className="w-4 h-4 text-gray-600" />
                             <span className="text-gray-700">Yêu thích</span>
-                            </a>
+                            </button>
                             <a
                             href="#"
                             className="flex items-center space-x-2 px-4 py-3 hover:bg-gray-50"
@@ -110,6 +131,19 @@ export default function Navbar({ onToggleMenu }) {
                             <Settings className="w-4 h-4 text-gray-600" />
                             <span className="text-gray-700">Cài đặt</span>
                             </a>
+                            {user?.role_id === 3 && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenDropdown(null);
+                                  navigate('/admin');
+                                }}
+                                className="flex items-center space-x-2 px-4 py-3 hover:bg-gray-50 w-full text-left"
+                              >
+                                <Settings className="w-4 h-4 text-gray-600" />
+                                <span className="text-gray-700">Quản lý trang web</span>
+                              </button>
+                            )}
                             <button
                             onClick={handleLogout}
                             className="flex items-center space-x-2 px-4 py-3 hover:bg-gray-50 w-full text-left border-t"

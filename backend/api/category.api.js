@@ -1,5 +1,6 @@
 import express from 'express';
 import * as categoryService from '../services/category.service.js';
+import * as productService from '../services/product.service.js';
 
 const router = express.Router();
 
@@ -64,6 +65,15 @@ router.post('/', async function (req, res) {
 router.delete('/:id', async function (req, res) {
   const id = req.params.id;
   try {
+    const countRow = await productService.countByCat(id);
+    const hasProducts = parseInt(countRow?.count || 0, 10) > 0;
+    if (hasProducts) {
+      return res.status(400).json({
+        result_code: -1,
+        result_message: 'Không thể xoá danh mục vì đang có sản phẩm thuộc danh mục này'
+      });
+    }
+
     const affectedRows = await categoryService.del(id);
     if (affectedRows > 0) {
       res.json({

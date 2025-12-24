@@ -1,6 +1,7 @@
 import axios from "axios";
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Heart } from 'lucide-react';
 
 const instance = axios.create({
   baseURL: 'http://localhost:3000/api/',
@@ -73,11 +74,18 @@ function formatDate(d) {
 }
 
 
-export function ProductCard({ p, onView, onAdd }) {
+export function ProductCard({ p, onView, onAdd, onAddToWatchlist }) {
   const timeLeft = timeLeftLabel(p.end_time || p.endtime || p.endTime);
 
   const handleCardClick = () => {
     onView(p);
+  };
+
+  const handleWatchlist = (e) => {
+    e.stopPropagation();
+    if (onAddToWatchlist) {
+      onAddToWatchlist(p);
+    }
   };
 
   return (
@@ -92,9 +100,18 @@ export function ProductCard({ p, onView, onAdd }) {
         </div>
       )}
 
+      {/* Nút yêu thích */}
+      <button
+        onClick={handleWatchlist}
+        className="absolute top-2 right-2 bg-white/90 hover:bg-white p-1.5 rounded-full shadow-sm transition"
+        title="Thêm vào danh sách yêu thích"
+      >
+        <Heart className="w-4 h-4 text-gray-600 hover:text-red-500 hover:fill-red-500" />
+      </button>
+
       {/* Số lượt ra giá */}
       {typeof p.bid_count === 'number' && (
-        <div className="absolute top-2 right-2 bg-white/90 px-2 py-1 rounded text-xs font-medium">
+        <div className="absolute top-10 right-2 bg-white/90 px-2 py-1 rounded text-xs font-medium">
           🔨 {p.bid_count} bids
         </div>
       )}
@@ -146,7 +163,7 @@ export function ProductCard({ p, onView, onAdd }) {
             Xem chi tiết
           </button>
 
-          <button
+          {/* <button
             onClick={(e) => {
               e.stopPropagation();
               onAdd(p);
@@ -154,7 +171,7 @@ export function ProductCard({ p, onView, onAdd }) {
             className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
           >
             Đặt giá
-          </button>
+          </button> */}
         </div>
       </div>
     </div>

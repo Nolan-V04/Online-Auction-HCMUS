@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { fetchProducts } from '@/services/product.service.jsx';
 import { fetchCategoryById } from '@/services/category.service.jsx';
+import { useAuth } from '@/contexts/AuthContext';
+import { addToWatchlist } from '@/services/watchlist.service.js';
 
 import { handleView, formatPrice, timeLeftLabel, ProductCard } from '@/services/product.service.jsx';
 
@@ -9,6 +11,7 @@ import { handleView, formatPrice, timeLeftLabel, ProductCard } from '@/services/
 export default function ProductsList() {
   const location = useLocation();
   const qs = new URLSearchParams(location.search);
+  const { isLoggedIn } = useAuth();
 
   const catid = qs.get('catid');
   const pageFromUrl = parseInt(qs.get('page') || '1', 10);
@@ -107,6 +110,46 @@ export default function ProductsList() {
     alert(`${p.proname} added to cart`);
   }
 
+  async function handleAddToWatchlist(p) {
+    // If logged in, use API
+    if (isLoggedIn) {
+      try {
+        const res = await addToWatchlist(p.proid);
+        if (res.result_code === 0) {
+          alert(`Đã thêm ${p.proname} vào danh sách yêu thích`);
+        } else if (res.result_code === -1 && res.result_message.includes('Vui lòng')) {
+          alert(res.result_message);
+        } else {
+          alert(`${p.proname} đã có trong danh sách yêu thích`);
+        }
+      } catch (err) {
+        console.error('Add to watchlist error', err);
+        alert('Lỗi khi thêm vào danh sách yêu thích');
+      }
+      return;
+    }
+
+    // Fallback to localStorage for guests
+    const watchlist = JSON.parse(localStorage.getItem('watchlist') || '[]');
+    const existing = watchlist.find((item) => item.proid === p.proid);
+
+    if (existing) {
+      alert(`${p.proname} đã có trong danh sách yêu thích`);
+      return;
+    }
+
+    watchlist.push({
+      proid: p.proid,
+      proname: p.proname,
+      price: p.price,
+      end_time: p.end_time || p.endtime || p.endTime,
+      created_at: p.created_at
+    });
+
+    localStorage.setItem('watchlist', JSON.stringify(watchlist));
+    alert(`Đã thêm ${p.proname} vào danh sách yêu thích`);
+  }
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] py-8 px-6 pb-28">
       <div className="max-w-7xl mx-auto">
@@ -131,6 +174,7 @@ export default function ProductsList() {
                 p={p}
                 onView={handleView}
                 onAdd={handleAdd}
+                onAddToWatchlist={handleAddToWatchlist}
               />
             ))}
           </div>

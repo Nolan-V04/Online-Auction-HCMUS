@@ -1,19 +1,19 @@
 import React, { Suspense } from 'react';
-import { Outlet, useNavigation } from "react-router";
+import { Outlet } from "react-router";
 import { useState } from 'react';
 import Navbar from "./NavBar";
+import { useLoading } from "../../contexts/LoadingContext";
 // Lazy-load LeftMenu so import/runtime errors don't take down the whole app
 const LeftMenu = React.lazy(() => import('./LeftMenu'));
 import ErrorBoundary from "./ErrorBoundary";
 
 export default function RootLayout() {
-  const navigation = useNavigation();
-  const isNavigating = Boolean(navigation.location);
+  const { isLoading } = useLoading();
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <>
-      {isNavigating && <GlobalSpinner />}
+      {isLoading && <GlobalSpinner />}
 
       {/* NAVBAR */}
       <Navbar onToggleMenu={() => setMenuOpen(v => !v)} />

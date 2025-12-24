@@ -3,9 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { LayoutGrid, Info, Activity, ArrowRight } from 'lucide-react';
 import { fetchTopEnding, fetchTopBids, fetchTopPrice } from '@/services/product.service.jsx';
 import { handleView, formatPrice, timeLeftLabel, ProductCard } from './services/product.service.jsx';
+import { useAuth } from '@/contexts/AuthContext';
+import { addToWatchlist } from '@/services/watchlist.service.js';
 
 
-export function Section({ title, products, onView, onAdd, loading }) {
+export function Section({ title, products, onView, onAdd, onAddToWatchlist, loading }) {
   return (
     <section className="w-full">
       <div className="flex items-center justify-between mb-4">
@@ -21,7 +23,7 @@ export function Section({ title, products, onView, onAdd, loading }) {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           {products.map((p) => (
-            <ProductCard key={p.proid} p={p} onView={onView} onAdd={onAdd} />
+            <ProductCard key={p.proid} p={p} onView={onView} onAdd={onAdd} onAddToWatchlist={onAddToWatchlist} />
           ))}
         </div>
       )}
@@ -35,6 +37,7 @@ function App() {
   const [price, setPrice] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { isLoggedIn } = useAuth();
 
   useEffect(() => {
     let mounted = true;
@@ -73,14 +76,54 @@ function App() {
     alert(`${p.proname} added to cart`);
   }
 
+  async function handleAddToWatchlist(p) {
+    // If logged in, use API
+    if (isLoggedIn) {
+      try {
+        const res = await addToWatchlist(p.proid);
+        if (res.result_code === 0) {
+          alert(`Đã thêm ${p.proname} vào danh sách yêu thích`);
+        } else if (res.result_code === -1 && res.result_message.includes('Vui lòng')) {
+          alert(res.result_message);
+        } else {
+          alert(`${p.proname} đã có trong danh sách yêu thích`);
+        }
+      } catch (err) {
+        console.error('Add to watchlist error', err);
+        alert('Lỗi khi thêm vào danh sách yêu thích');
+      }
+      return;
+    }
+
+    // Fallback to localStorage for guests
+    const watchlist = JSON.parse(localStorage.getItem('watchlist') || '[]');
+    const existing = watchlist.find((item) => item.proid === p.proid);
+
+    if (existing) {
+      alert(`${p.proname} đã có trong danh sách yêu thích`);
+      return;
+    }
+
+    watchlist.push({
+      proid: p.proid,
+      proname: p.proname,
+      price: p.price,
+      end_time: p.end_time || p.endtime || p.endTime,
+      created_at: p.created_at
+    });
+
+    localStorage.setItem('watchlist', JSON.stringify(watchlist));
+    alert(`Đã thêm ${p.proname} vào danh sách yêu thích`);
+  }
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] py-8 px-6">
       <div className="max-w-7xl mx-auto">
         {/* Sections */}
         <div className="space-y-8">
-          <Section title="Top 5: Sản phẩm gần kết thúc" products={ending} onView={handleView} onAdd={handleAdd} loading={loading} />
-          <Section title="Top 5: Sản phẩm nhiều lượt ra giá nhất" products={bids} onView={handleView} onAdd={handleAdd} loading={loading} />
-          <Section title="Top 5: Sản phẩm có giá cao nhất" products={price} onView={handleView} onAdd={handleAdd} loading={loading} />
+          <Section title="Top 5: Sản phẩm gần kết thúc" products={ending} onView={handleView} onAdd={handleAdd} onAddToWatchlist={handleAddToWatchlist} loading={loading} />
+          <Section title="Top 5: Sản phẩm nhiều lượt ra giá nhất" products={bids} onView={handleView} onAdd={handleAdd} onAddToWatchlist={handleAddToWatchlist} loading={loading} />
+          <Section title="Top 5: Sản phẩm có giá cao nhất" products={price} onView={handleView} onAdd={handleAdd} onAddToWatchlist={handleAddToWatchlist} loading={loading} />
         </div>
       </div>
     </div>

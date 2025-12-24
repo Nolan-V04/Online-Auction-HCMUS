@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Heart } from 'lucide-react';
 import { fetchProductById, fetchRelatedProducts } from '@/services/product.service.jsx';
+import { useAuth } from '@/contexts/AuthContext';
+import { addToWatchlist } from '@/services/watchlist.service.js';
+import { getBidHistory } from '@/services/bid.service.js';
+import BidModal from '@/components/BidModal';
 
 function formatPrice(v) {
   return new Intl.NumberFormat('vi-VN').format(v) + ' ₫';
@@ -21,13 +26,23 @@ function relativeTime(endTime) {
   return `${days} ngày nữa`;
 }
 
+function maskUsername(username) {
+  if (!username) return '****';
+  if (username.length <= 2) return '****';
+  return '****' + username.slice(-Math.min(4, username.length));
+}
+
 export default function ItemDetails() {
   const { proid } = useParams();   // ✅ ĐÚNG
   const navigate = useNavigate();
+  const { isLoggedIn } = useAuth();
 
   const [product, setProduct] = useState(null);
   const [related, setRelated] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isInWatchlist, setIsInWatchlist] = useState(false);
+  const [bidModalOpen, setBidModalOpen] = useState(false);
+  const [bidHistory, setBidHistory] = useState([]);
 
   useEffect(() => {
     let mounted = true;
@@ -35,17 +50,19 @@ export default function ItemDetails() {
     async function fetchData() {
       setLoading(true);
       try {
-        const [p, r] = await Promise.all([
+        const [p, r, bh] = await Promise.all([
           fetchProductById(proid),
-          fetchRelatedProducts(proid)
+          fetchRelatedProducts(proid),
+          getBidHistory(proid).catch(() => ({ bids: [] }))
         ]);
 
         if (!mounted) return;
         setProduct(p);
         setRelated(r);
+        setBidHistory(bh.bids || []);
       } catch (err) {
         console.error('Error fetching product details:', err);
-        setProduct(null);
+        if (mounted) setProduct(null);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -66,12 +83,76 @@ export default function ItemDetails() {
   price,
   buy_now_price,
   bid_count,
+  bid_step,
   created_at,
   end_time,
   seller,
   highest_bidder,
+  highest_bidder_username,
   qa_list = []
 } = product;
+
+  async function handleAddToWatchlist() {
+    // If logged in, use API
+    if (isLoggedIn) {
+      try {
+        const res = await addToWatchlist(proid);
+        if (res.result_code === 0) {
+          setIsInWatchlist(true);
+          alert(`Đã thêm ${proname} vào danh sách yêu thích`);
+        } else if (res.result_code === -1 && res.result_message.includes('Vui lòng')) {
+          alert(res.result_message);
+        } else {
+          alert(`${proname} đã có trong danh sách yêu thích`);
+        }
+      } catch (err) {
+        console.error('Add to watchlist error', err);
+        alert('Lỗi khi thêm vào danh sách yêu thích');
+      }
+      return;
+    }
+
+    // Fallback to localStorage for guests
+    const watchlist = JSON.parse(localStorage.getItem('watchlist') || '[]');
+    const existing = watchlist.find((item) => item.proid === parseInt(proid));
+
+    if (existing) {
+      alert(`${proname} đã có trong danh sách yêu thích`);
+      return;
+    }
+
+    watchlist.push({
+      proid: parseInt(proid),
+      proname,
+      price,
+      end_time,
+      created_at
+    });
+
+    localStorage.setItem('watchlist', JSON.stringify(watchlist));
+    setIsInWatchlist(true);
+    alert(`Đã thêm ${proname} vào danh sách yêu thích`);
+  }
+
+  async function handleBidSuccess(data) {
+    // Reload product to get updated price
+    setProduct(prev => ({
+      ...prev,
+      price: data.new_price,
+      bid_count: (prev.bid_count || 0) + 1
+    }));
+    
+    // Refresh bid history
+    try {
+      const bh = await getBidHistory(proid);
+      setBidHistory(bh.bids || []);
+    } catch (err) {
+      console.error('Error refreshing bid history:', err);
+    }
+    
+    alert('Đặt giá thành công!');
+  }
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] py-8 px-6">
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -134,6 +215,7 @@ export default function ItemDetails() {
               ))}
             </div>
           </div>
+
         </div>
 
         {/* RIGHT */}
@@ -141,8 +223,25 @@ export default function ItemDetails() {
 
           {/* INFO */}
           <div className="bg-white rounded shadow p-6">
-            <h1 className="text-xl font-semibold">{proname}</h1>
-            <p className="text-sm text-gray-500 mt-1">{tinydes}</p>
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1">
+                <h1 className="text-xl font-semibold">{proname}</h1>
+                <p className="text-sm text-gray-500 mt-1">{tinydes}</p>
+              </div>
+              <button
+                onClick={handleAddToWatchlist}
+                className="flex-shrink-0 p-2 hover:bg-gray-100 rounded-full transition"
+                title="Thêm vào danh sách yêu thích"
+              >
+                <Heart 
+                  className={`w-6 h-6 ${
+                    isInWatchlist 
+                      ? 'text-red-500 fill-red-500' 
+                      : 'text-gray-600 hover:text-red-500'
+                  }`} 
+                />
+              </button>
+            </div>
 
             <div className="mt-4 space-y-2 text-sm">
               <div className="flex justify-between">
@@ -177,7 +276,17 @@ export default function ItemDetails() {
               </div>
             </div>
 
-            <button className="w-full mt-4 bg-blue-600 text-white py-2 rounded hover:bg-blue-700">
+            <button 
+              onClick={() => {
+                if (!isLoggedIn) {
+                  alert('Vui lòng đăng nhập để đặt giá');
+                  navigate('/signin');
+                  return;
+                }
+                setBidModalOpen(true);
+              }}
+              className="w-full mt-4 bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+            >
               Đặt giá
             </button>
           </div>
@@ -200,13 +309,50 @@ export default function ItemDetails() {
             <h3 className="font-semibold">Người đấu cao nhất</h3>
             {highest_bidder ? (
               <>
-                <p>{highest_bidder.name}</p>
-                <p className="text-xs text-gray-500">
-                  ⭐ {highest_bidder.rating}/5
-                </p>
+                <p>{maskUsername(highest_bidder_username) || highest_bidder}</p>
               </>
             ) : (
               <p className="text-sm text-gray-400">Chưa có</p>
+            )}
+          </div>
+
+          {/* BID HISTORY */}
+          <div className="bg-white rounded shadow p-6">
+            <h3 className="font-semibold mb-4">Lịch sử đấu giá</h3>
+
+            {bidHistory.length === 0 ? (
+              <p className="text-sm text-gray-500">Chưa có lượt đấu giá</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="border-b">
+                    <tr className="text-left">
+                      <th className="pb-2">Thời điểm</th>
+                      <th className="pb-2">Người mua</th>
+                      <th className="pb-2 text-right">Giá</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bidHistory.map((bid) => (
+                      <tr key={bid.bidid} className="border-b last:border-0">
+                        <td className="py-2">
+                          {new Date(bid.bid_time).toLocaleString('vi-VN', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </td>
+                        <td className="py-2">{maskUsername(bid.username)}</td>
+                        <td className="py-2 text-right font-semibold text-red-600">
+                          {formatPrice(bid.amount)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </div>
@@ -239,6 +385,15 @@ export default function ItemDetails() {
           ))}
         </div>
       </div>
+
+      {/* Bid Modal */}
+      <BidModal
+        isOpen={bidModalOpen}
+        onClose={() => setBidModalOpen(false)}
+        productId={proid}
+        productName={proname}
+        onBidSuccess={handleBidSuccess}
+      />
     </div>
   );
 }

@@ -1,0 +1,46 @@
+# Bidding API Test
+
+### Get bid info for a product (requires login)
+GET http://localhost:3000/api/bids/info/1
+Cookie: connect.sid=YOUR_SESSION_COOKIE
+
+### Place a bid (requires login)
+POST http://localhost:3000/api/bids/place
+Content-Type: application/json
+Cookie: connect.sid=YOUR_SESSION_COOKIE
+
+{
+  "productId": 1,
+  "bidAmount": 150000
+}
+
+### Get bid history for a product
+GET http://localhost:3000/api/bids/history/1
+
+### Expected responses:
+
+# Success case (eligible bidder):
+# {
+#   "result_code": 0,
+#   "result_message": "Đặt giá thành công",
+#   "bid": { ... },
+#   "new_price": 150000
+# }
+
+# Fail case (rating < 80%):
+# {
+#   "result_code": -1,
+#   "result_message": "Không đủ điều kiện (60.0% < 80% yêu cầu)",
+#   "rating_info": {
+#     "positive": 6,
+#     "negative": 4,
+#     "total": 10,
+#     "percentage": 60
+#   }
+# }
+
+# Fail case (unrated bidder not allowed):
+# {
+#   "result_code": -1,
+#   "result_message": "Người bán không cho phép bidder chưa được đánh giá tham gia"
+# }
