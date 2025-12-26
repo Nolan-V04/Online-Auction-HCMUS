@@ -24,6 +24,10 @@ export async function createCategory(data) {
   }
 }
 
+export async function addCategory(data) {
+  return createCategory(data);
+}
+
 export async function deleteCategory(catid) {
   const res = await instance.delete(`/categories/${catid}`);
   if (res.status === 200) {

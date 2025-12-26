@@ -38,6 +38,7 @@ app.use(passport.session());
 
 
 app.use('/static', express.static('static'));
+app.use('/uploads', express.static('static/uploads'));
 app.use(express.urlencoded({
   extended: true
 }));
@@ -70,6 +71,9 @@ app.use('/api/profile', profileRouter);
 
 import adminRouter from './api/admin.api.js';
 app.use('/api/admin', adminRouter);
+
+import sellerRouter from './api/seller.api.js';
+app.use('/api/seller/products', sellerRouter);
 
 import authRouter from './routes/auth.route.js';
 app.use('/auth', authRouter);

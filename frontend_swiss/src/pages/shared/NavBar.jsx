@@ -1,12 +1,22 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, User, UserCircle, Settings, LogOut, Package, Heart } from 'lucide-react';
+import { ChevronDown, User, UserCircle, Settings, LogOut, Package, Heart, ShoppingCart } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function Navbar({ onToggleMenu }) {
   const { isLoggedIn, user, logout } = useAuth();
   const [openDropdown, setOpenDropdown] = useState(null);
   const [openSubDropdown, setOpenSubDropdown] = useState(null);
+
+  // Role mapping
+  const getRoleName = (roleId) => {
+    const roleMap = {
+      1: 'Người dùng',
+      2: 'Người bán',
+      3: 'Admin'
+    };
+    return roleMap[roleId] || 'Người dùng';
+  };
 
   const toggleDropdown = (name) => {
     setOpenDropdown(openDropdown === name ? null : name);
@@ -84,8 +94,11 @@ export default function Navbar({ onToggleMenu }) {
                         onClick={() => toggleDropdown('user')}
                         className="flex items-center space-x-2 hover:bg-gray-50 p-2 rounded-lg"
                         >
-                        <div className="w-9 h-9 bg-blue-600 rounded-full flex items-center justify-center">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-9 h-9 bg-blue-600 rounded-full flex items-center justify-center">
                             <User className="w-5 h-5 text-white" />
+                          </div>
+                          <span className="text-sm font-medium text-gray-700">{getRoleName(user?.role_id)}</span>
                         </div>
                         <ChevronDown className="w-4 h-4 text-gray-600" />
                         </button>
@@ -131,6 +144,19 @@ export default function Navbar({ onToggleMenu }) {
                             <Settings className="w-4 h-4 text-gray-600" />
                             <span className="text-gray-700">Cài đặt</span>
                             </a>
+                            {(user?.role_id === 2 || user?.role_id === 3) && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenDropdown(null);
+                                  navigate('/seller/products');
+                                }}
+                                className="flex items-center space-x-2 px-4 py-3 hover:bg-gray-50 w-full text-left"
+                              >
+                                <ShoppingCart className="w-4 h-4 text-gray-600" />
+                                <span className="text-gray-700">Quản lý sản phẩm đấu giá</span>
+                              </button>
+                            )}
                             {user?.role_id === 3 && (
                               <button
                                 onClick={(e) => {

@@ -1,7 +1,11 @@
 import db from '../utils/db.js';
 
 export function findAll() {
-  return db('products');
+  return db('products')
+    .where(function() {
+      this.whereNull('end_time')
+        .orWhere('end_time', '>', db.raw('now()'));
+    });
 }
 
 export function add(entity) {
@@ -15,8 +19,22 @@ export function findById(id) {
 // Find product with highest bidder info joined
 export function findByIdWithHighestBidder(id) {
   return db('products as p')
-    .leftJoin('users as u', 'p.highest_bidder', 'u.id')
-    .select('p.*', 'u.username as highest_bidder_username', 'u.name as highest_bidder_name')
+    .leftJoin('users as bidder', 'p.highest_bidder', 'bidder.id')
+    .leftJoin('users as seller', 'p.seller_id', 'seller.id')
+    .select(
+      'p.*', 
+      'bidder.username as highest_bidder_username', 
+      'bidder.name as highest_bidder_name',
+      'bidder.positive_ratings as highest_bidder_positive_ratings',
+      'bidder.negative_ratings as highest_bidder_negative_ratings',
+      'bidder.total_ratings as highest_bidder_total_ratings',
+      'seller.username as seller_username',
+      'seller.name as seller_name',
+      'seller.email as seller_email',
+      'seller.positive_ratings as seller_positive_ratings',
+      'seller.negative_ratings as seller_negative_ratings',
+      'seller.total_ratings as seller_total_ratings'
+    )
     .where('p.proid', id)
     .first();
 }
@@ -31,9 +49,40 @@ export async function findRelated(proid, limit = 5) {
     return [];
   }
 
-  return db('products')
+  // Get category info to check if it has parent or children
+  const category = await db('categories')
     .where('catid', product.catid)
+    .first();
+
+  if (!category) {
+    return [];
+  }
+
+  let categoryIds = [product.catid];
+
+  // If category has a parent, get parent and all siblings
+  if (category.parent_id) {
+    const siblings = await db('categories')
+      .where('parent_id', category.parent_id)
+      .select('catid');
+    categoryIds = [category.parent_id, ...siblings.map(s => s.catid)];
+  } else {
+    // If category is a parent, get all children
+    const children = await db('categories')
+      .where('parent_id', product.catid)
+      .select('catid');
+    if (children.length > 0) {
+      categoryIds = [product.catid, ...children.map(c => c.catid)];
+    }
+  }
+
+  return db('products')
+    .whereIn('catid', categoryIds)
     .andWhere('proid', '<>', proid)
+    .where(function() {
+      this.whereNull('end_time')
+        .orWhere('end_time', '>', db.raw('now()'));
+    })
     .orderByRaw('RANDOM()')
     .limit(limit);
 }
@@ -52,12 +101,49 @@ export function findByCat(catId) {
 }
 
 export function findPageByCat(catId, limit, offset) {
-  return db('products').where('catid', catId).limit(limit).offset(offset);
+  return db('products')
+    .where('catid', catId)
+    .where(function() {
+      this.whereNull('end_time')
+        .orWhere('end_time', '>', db.raw('now()'));
+    })
+    .limit(limit)
+    .offset(offset);
 }
 
 export function countByCat(catId) {
-  return db('products').where('catid', catId)
-    .count('proid as count').first();
+  return db('products')
+    .where('catid', catId)
+    .where(function() {
+      this.whereNull('end_time')
+        .orWhere('end_time', '>', db.raw('now()'));
+    })
+    .count('proid as count')
+    .first();
+}
+
+// Find products by multiple category IDs with pagination
+export function findPageByMultipleCats(categoryIds, limit, offset) {
+  return db('products')
+    .whereIn('catid', categoryIds)
+    .where(function() {
+      this.whereNull('end_time')
+        .orWhere('end_time', '>', db.raw('now()'));
+    })
+    .limit(limit)
+    .offset(offset);
+}
+
+// Count products by multiple category IDs
+export function countByMultipleCats(categoryIds) {
+  return db('products')
+    .whereIn('catid', categoryIds)
+    .where(function() {
+      this.whereNull('end_time')
+        .orWhere('end_time', '>', db.raw('now()'));
+    })
+    .count('proid as count')
+    .first();
 }
 
 export function search(keyword) {
@@ -84,6 +170,10 @@ export function findTopEnding(limit = 5) {
 // Top N products by number of bids (uses bids table)
 export function findTopByBids(limit = 5) {
   return db('products')
+    .where(function() {
+      this.whereNull('end_time')
+        .orWhere('end_time', '>', db.raw('now()'));
+    })
     .orderBy('bid_count', 'desc')
     .limit(limit);
 }
@@ -91,6 +181,10 @@ export function findTopByBids(limit = 5) {
 // Top N products by price
 export function findTopByPrice(limit = 5) {
   return db('products')
+    .where(function() {
+      this.whereNull('end_time')
+        .orWhere('end_time', '>', db.raw('now()'));
+    })
     .orderBy('price', 'desc')
     .limit(limit);
 }
@@ -103,6 +197,10 @@ export function findByIds(ids, limit, offset) {
   
   return db('products')
     .whereIn('proid', ids)
+    .where(function() {
+      this.whereNull('end_time')
+        .orWhere('end_time', '>', db.raw('now()'));
+    })
     .orderBy('proid', 'desc')
     .limit(limit)
     .offset(offset);

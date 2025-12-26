@@ -26,9 +26,49 @@ function calculateRatingPercentage(user) {
 }
 
 // Check if bidder is eligible to bid
-function isEligibleToBid(user, product) {
+async function isEligibleToBid(user, product, db) {
+  // FIRST: Check if user is the seller - sellers cannot bid on their own products
+  if (product.seller_id && user.id === product.seller_id) {
+    return {
+      eligible: false,
+      reason: 'Người bán không thể đấu giá sản phẩm của chính mình'
+    };
+  }
+
+  // SECOND: Check if user has been rejected by seller
+  const isRejected = await db('rejected_bidders')
+    .where({
+      product_id: product.proid,
+      bidder_id: user.id
+    })
+    .first();
+
+  if (isRejected) {
+    return {
+      eligible: false,
+      reason: 'Bạn đã bị người bán từ chối đấu giá sản phẩm này'
+    };
+  }
+
   const ratingPercentage = calculateRatingPercentage(user);
   
+  // Check if user has approved permission for this product
+  const approvedPermission = await db('bid_permission_requests')
+    .where({
+      product_id: product.proid,
+      bidder_id: user.id,
+      status: 'approved'
+    })
+    .first();
+
+  // If user has approved permission, they can bid
+  if (approvedPermission) {
+    return {
+      eligible: true,
+      reason: 'Đã được người bán chấp nhận'
+    };
+  }
+
   // If user has no rating history
   if (ratingPercentage === null) {
     return {
@@ -86,8 +126,11 @@ router.post('/place', requireAuth, async (req, res) => {
     // Get bidder info
     const bidder = await userService.findById(bidderId);
     
+    // Get database connection
+    const db = req.app.get('db');
+    
     // Check eligibility
-    const eligibility = isEligibleToBid(bidder, product);
+    const eligibility = await isEligibleToBid(bidder, product, db);
     if (!eligibility.eligible) {
       return res.status(403).json({
         result_code: -1,
@@ -170,8 +213,11 @@ router.get('/info/:productId', requireAuth, async (req, res) => {
     // Get bidder info
     const bidder = await userService.findById(bidderId);
     
+    // Get database connection
+    const db = req.app.get('db');
+    
     // Check eligibility
-    const eligibility = isEligibleToBid(bidder, product);
+    const eligibility = await isEligibleToBid(bidder, product, db);
     
     // Calculate suggested bid
     const currentPrice = parseFloat(product.price) || 0;

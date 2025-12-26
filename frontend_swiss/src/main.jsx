@@ -5,6 +5,7 @@ import { RouterProvider } from "react-router/dom";
 import router from '@/routes/router.jsx'
 import { LoadingProvider, useLoading } from '@/contexts/LoadingContext'
 import { AuthProvider } from '@/contexts/AuthContext'
+import { CategoryProvider } from '@/contexts/CategoryContext'
 import { setupLoadingInterceptor as setupApiLoading } from '@/services/account.service'
 import { setupLoadingInterceptor as setupAuthLoading } from '@/services/auth.service.js'
 
@@ -25,7 +26,9 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <LoadingProvider>
       <AuthProvider>
-        <AppWrapper />
+        <CategoryProvider>
+          <AppWrapper />
+        </CategoryProvider>
       </AuthProvider>
     </LoadingProvider>
   </StrictMode>,

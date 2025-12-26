@@ -1,14 +1,18 @@
 import React, { Suspense } from 'react';
-import { Outlet } from "react-router";
+import { Outlet, useNavigate } from "react-router";
 import { useState } from 'react';
+import { Plus } from 'lucide-react';
 import Navbar from "./NavBar";
 import { useLoading } from "../../contexts/LoadingContext";
+import { useAuth } from "../../contexts/AuthContext";
 // Lazy-load LeftMenu so import/runtime errors don't take down the whole app
 const LeftMenu = React.lazy(() => import('./LeftMenu'));
 import ErrorBoundary from "./ErrorBoundary";
 
 export default function RootLayout() {
   const { isLoading } = useLoading();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -17,6 +21,20 @@ export default function RootLayout() {
 
       {/* NAVBAR */}
       <Navbar onToggleMenu={() => setMenuOpen(v => !v)} />
+
+      {/* Floating Add Button for Seller/Admin */}
+      {(user?.role_id === 2 || user?.role_id === 3) && (
+        <button
+          onClick={() => navigate('/seller/products')}
+          className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center z-40 group"
+          aria-label="Quản lý sản phẩm đấu giá"
+        >
+          <Plus className="w-6 h-6" />
+          <span className="absolute right-full mr-3 px-3 py-2 bg-gray-900 text-white text-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            Quản lý sản phẩm đấu giá
+          </span>
+        </button>
+      )}
 
       {/* PAGE CONTENT: sidebar + main */}
       <div className="container mx-auto px-4 mt-6 grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6">

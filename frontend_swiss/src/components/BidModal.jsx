@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, AlertCircle, CheckCircle, TrendingUp } from 'lucide-react';
 import { getBidInfo, placeBid } from '@/services/bid.service.js';
+import axios from 'axios';
 
 function formatPrice(v) {
   return new Intl.NumberFormat('vi-VN').format(v) + ' ₫';
@@ -12,6 +13,8 @@ export default function BidModal({ isOpen, onClose, productId, productName, onBi
   const [bidAmount, setBidAmount] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [requestingPermission, setRequestingPermission] = useState(false);
+  const [permissionMessage, setPermissionMessage] = useState('');
 
   useEffect(() => {
     if (isOpen && productId) {
@@ -68,14 +71,39 @@ export default function BidModal({ isOpen, onClose, productId, productName, onBi
     }
   }
 
+  async function handleRequestPermission() {
+    setRequestingPermission(true);
+    setPermissionMessage('');
+    try {
+      const response = await axios.post(
+        `http://localhost:3000/api/products/${productId}/request-bid-permission`,
+        {},
+        { 
+          withCredentials: true,
+          headers: { 'apiKey': '12345ABCDE' }
+        }
+      );
+
+      if (response.data.result_code === 0) {
+        setPermissionMessage(response.data.result_message);
+      } else {
+        setError(response.data.result_message);
+      }
+    } catch (err) {
+      setError('Lỗi khi gửi yêu cầu xin phép');
+    } finally {
+      setRequestingPermission(false);
+    }
+  }
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold">Đặt giá đấu</h2>
+        <div className="flex items-center justify-between bg-blue-500 p-4 border-b">
+          <h2 className="text-lg font-semibold text-white">Đặt giá đấu</h2>
           <button
             onClick={onClose}
             className="p-1 hover:bg-gray-100 rounded"
@@ -197,6 +225,49 @@ export default function BidModal({ isOpen, onClose, productId, productName, onBi
                     </button>
                   </div>
                 </form>
+              )}
+
+              {/* Request Permission Button for ineligible bidders */}
+              {!bidInfo.eligible && (
+                <div className="space-y-4">
+                  {permissionMessage ? (
+                    <div className="bg-green-50 border border-green-200 rounded p-4 flex items-start gap-2">
+                      <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                      <div className="text-sm text-green-800">{permissionMessage}</div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-sm text-gray-600 bg-yellow-50 border border-yellow-200 rounded p-3">
+                        <p className="font-medium text-yellow-800 mb-2">Bạn chưa đủ điều kiện để đấu giá</p>
+                        <p>Bạn có thể gửi yêu cầu xin phép người bán để được tham gia đấu giá sản phẩm này. Người bán sẽ nhận được email thông báo và xem xét yêu cầu của bạn.</p>
+                      </div>
+
+                      {error && (
+                        <div className="bg-red-50 border border-red-200 rounded p-3 text-sm text-red-800">
+                          {error}
+                        </div>
+                      )}
+
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={handleRequestPermission}
+                          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                          disabled={requestingPermission}
+                        >
+                          {requestingPermission ? 'Đang gửi...' : 'Xin phép người bán'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={onClose}
+                          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                        >
+                          Đóng
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               )}
             </>
           ) : null}

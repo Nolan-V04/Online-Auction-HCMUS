@@ -19,6 +19,7 @@ import Signup from "@/pages/shared/Signup";
 import ProductDetail from "@/pages/shared/itemdetails.jsx";
 import WatchlistPage from "@/pages/shared/WatchlistPage.jsx";
 import ProfilePage from "@/pages/shared/Profile.jsx";
+import SellerProducts from "@/pages/seller/SellerProducts.jsx";
 
 const router = createBrowserRouter([
   {
@@ -53,6 +54,10 @@ const router = createBrowserRouter([
         element: <ProfilePage />,
       },
       {
+        path: "/seller/products",
+        element: <SellerProducts />,
+      },
+      {
         path: "/admin",
         element: <AdminLayout />,
         children: [
@@ -67,10 +72,40 @@ const router = createBrowserRouter([
             action: async ({ request }) => {
               const formData = await request.formData();
               const intent = formData.get("intent");
+              
+              if (intent === "add") {
+                const catname = formData.get("catname");
+                const parent_id = formData.get("parent_id");
+                const res = await categoryService.addCategory({ 
+                  catname, 
+                  parent_id: parent_id || null 
+                });
+                return { success: true, data: res.data };
+              }
+              
+              if (intent === "update") {
+                const catid = formData.get("catid");
+                const catname = formData.get("catname");
+                const parent_id = formData.get("parent_id");
+                const res = await categoryService.updateCategory(catid, { 
+                  catname, 
+                  parent_id: parent_id || null 
+                });
+                return { success: true, data: res.data };
+              }
+              
               if (intent === "delete") {
                 const catid = formData.get("catid");
-                const res = await categoryService.deleteCategory(catid);
-                return res.data;
+                try {
+                  const res = await categoryService.deleteCategory(catid);
+                  return { success: true, data: res.data };
+                } catch (error) {
+                  // Return error message to display in UI
+                  return {
+                    error: true,
+                    message: error.response?.data?.result_message || 'Không thể xóa danh mục'
+                  };
+                }
               }
 
               return null;

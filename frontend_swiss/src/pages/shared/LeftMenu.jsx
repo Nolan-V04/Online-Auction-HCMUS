@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { fetchCategoryTree } from '@/services/category.service.jsx';
+import { useCategoryRefresh } from '@/contexts/CategoryContext';
 
 // Debug: log module load (helps detect import/runtime errors)
 if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
@@ -17,6 +18,7 @@ export default function LeftMenu({ mobileOpen = false, onClose = () => {} }) {
   const location = useLocation();
   const qs = new URLSearchParams(location.search);
   const activeCat = qs.get('catid');
+  const { refreshKey } = useCategoryRefresh();
 
   // load function with retry and safe error handling
   async function loadTree() {
@@ -24,19 +26,18 @@ export default function LeftMenu({ mobileOpen = false, onClose = () => {} }) {
     try {
       const data = await fetchCategoryTree();
       const list = data || [];
-      // auto-open parent if active category is present in query
-      if (activeCat) {
-        const map = {};
-        list.forEach(p => {
-          if (p.children && p.children.some(c => String(c.catid) === String(activeCat))) {
-            map[p.catid] = true;
-          }
-        });
-        setTree(list);
-        setOpen(map);
-      } else {
-        setTree(list);
-      }
+      
+      // Auto-open all parent categories that have children
+      const map = {};
+      list.forEach(p => {
+        if (p.children && p.children.length > 0) {
+          map[p.catid] = true;
+        }
+      });
+      
+      setTree(list);
+      setOpen(map);
+      
       // debug
       if (process.env.NODE_ENV !== 'production') {
         // eslint-disable-next-line no-console
@@ -56,7 +57,7 @@ export default function LeftMenu({ mobileOpen = false, onClose = () => {} }) {
     // call loadTree (it is safe internally)
     if (mounted) loadTree();
     return () => { mounted = false };
-  }, [activeCat]);
+  }, [activeCat, refreshKey]);
 
   function toggle(id) {
     setOpen(prev => ({ ...prev, [id]: !prev[id] }));
@@ -90,10 +91,22 @@ export default function LeftMenu({ mobileOpen = false, onClose = () => {} }) {
               <ul className="space-y-2">
                 {tree.map(parent => (
                   <li key={parent.catid}>
-                    <button onClick={() => toggle(parent.catid)} className="w-full flex items-center justify-between text-left text-gray-800 font-medium hover:text-blue-600">
-                      <span>{parent.catname} <small className="text-xs text-gray-500 ml-2">({parent.count ?? 0})</small></span>
-                      <span className="ml-2">{open[parent.catid] ? '▾' : '▸'}</span>
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button 
+                        onClick={() => { goToCategory(parent.catid); onClose(); }} 
+                        className="flex-1 text-left text-gray-800 font-medium hover:text-blue-600"
+                      >
+                        <span>{parent.catname} <small className="text-xs text-gray-500 ml-2">({parent.count ?? 0})</small></span>
+                      </button>
+                      {parent.children && parent.children.length > 0 && (
+                        <button 
+                          onClick={() => toggle(parent.catid)} 
+                          className="px-2 text-gray-600 hover:text-blue-600"
+                        >
+                          {open[parent.catid] ? '▾' : '▸'}
+                        </button>
+                      )}
+                    </div>
                     {open[parent.catid] && parent.children && parent.children.length > 0 && (
                       <ul className="mt-2 ml-4 space-y-1">
                         {parent.children.map(child => (
@@ -127,10 +140,22 @@ export default function LeftMenu({ mobileOpen = false, onClose = () => {} }) {
             <ul className="space-y-2">
               {tree.map(parent => (
                 <li key={parent.catid}>
-                  <button onClick={() => toggle(parent.catid)} className="w-full flex items-center justify-between text-left text-gray-800 font-medium hover:text-blue-600">
-                    <span>{parent.catname} <small className="text-xs text-gray-500 ml-2">({parent.count ?? 0})</small></span>
-                    <span className="ml-2">{open[parent.catid] ? '▾' : '▸'}</span>
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button 
+                      onClick={() => goToCategory(parent.catid)} 
+                      className="flex-1 text-left text-gray-800 font-medium hover:text-blue-600"
+                    >
+                      <span>{parent.catname} <small className="text-xs text-gray-500 ml-2">({parent.count ?? 0})</small></span>
+                    </button>
+                    {parent.children && parent.children.length > 0 && (
+                      <button 
+                        onClick={() => toggle(parent.catid)} 
+                        className="px-2 text-gray-600 hover:text-blue-600"
+                      >
+                        {open[parent.catid] ? '▾' : '▸'}
+                      </button>
+                    )}
+                  </div>
                   {open[parent.catid] && parent.children && parent.children.length > 0 && (
                     <ul className="mt-2 ml-4 space-y-1">
                       {parent.children.map(child => (

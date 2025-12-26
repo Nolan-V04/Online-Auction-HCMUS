@@ -119,7 +119,11 @@ export function ProductCard({ p, onView, onAdd, onAddToWatchlist }) {
       {/* Ảnh */}
       <div className="h-44 bg-gray-100">
         <img
-          src={`/static/imgs/sp/${p.proid}/main_thumbs.jpg`}
+          src={
+            p.images && p.images.length > 0 
+              ? `http://localhost:3000${p.images[0]}`
+              : `/static/imgs/sp/${p.proid}/main_thumbs.jpg`
+          }
           alt={p.proname}
           className="object-cover h-full w-full"
           onError={(e) => { e.target.src = '/vite.svg'; }}
@@ -129,6 +133,14 @@ export function ProductCard({ p, onView, onAdd, onAddToWatchlist }) {
       {/* Nội dung */}
       <div className="p-3 space-y-1">
         <h3 className="text-sm font-semibold truncate">{p.proname}</h3>
+
+        {/* Mô tả ngắn */}
+        {p.tinydes && (
+          <div 
+            className="text-xs text-gray-500 line-clamp-2 min-h-[2rem]" 
+            dangerouslySetInnerHTML={{ __html: p.tinydes }} 
+          />
+        )}
 
         <div className="text-xs text-gray-500">
           Đăng ngày: {formatDate(p.created_at)}

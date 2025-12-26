@@ -21,4 +21,4 @@ export function requireRoles(roleIds = []) {
 }
 
 export const requireAdmin = requireRoles([3]);
-export const requireSeller = requireRoles([2]);
+export const requireSeller = requireRoles([2, 3]); // Seller or Admin

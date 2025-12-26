@@ -17,6 +17,21 @@ export async function listProducts() {
   return res.data;
 }
 
+export async function getProductDetails(id) {
+  const res = await instance.get(`/products/${id}`);
+  return res.data;
+}
+
+export async function addProduct(data) {
+  const res = await instance.post('/products', data);
+  return res.data;
+}
+
+export async function updateProduct(id, data) {
+  const res = await instance.patch(`/products/${id}`, data);
+  return res.data;
+}
+
 export async function removeProduct(id) {
   const res = await instance.post(`/products/${id}/remove`);
   return res.data;
@@ -39,5 +54,20 @@ export async function rejectSellerRequest(id, note) {
 
 export async function updateUser(id, data) {
   const res = await instance.patch(`/users/${id}`, data);
+  return res.data;
+}
+
+export async function getUserDetails(id) {
+  const res = await instance.get(`/users/${id}`);
+  return res.data;
+}
+
+export async function addUser(data) {
+  const res = await instance.post('/users', data);
+  return res.data;
+}
+
+export async function deleteUser(id) {
+  const res = await instance.delete(`/users/${id}`);
   return res.data;
 }

@@ -56,3 +56,16 @@ export async function isInWatchlist(userId, productId) {
   `, [userId, productId]);
   return result.rows[0]?.exists || false;
 }
+
+export function findAll() {
+  return db('users').select('*');
+}
+
+export async function del(id) {
+  // Check if user has any bids
+  const bidsCount = await db('bids').where('userid', id).count('* as count').first();
+  if (bidsCount && parseInt(bidsCount.count) > 0) {
+    throw new Error('Không thể xóa người dùng đã có lịch sử đấu giá');
+  }
+  return db('users').where('id', id).del();
+}

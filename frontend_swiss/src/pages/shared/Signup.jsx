@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import ReCAPTCHA from "react-google-recaptcha";
+import { X } from 'lucide-react';
 import { requestOtp, verifyOtp } from "../../services/account.service.jsx";
 
 export default function Signup() {
@@ -17,12 +18,14 @@ export default function Signup() {
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
   const [recaptchaToken, setRecaptchaToken] = useState("");
+  const [errorModal, setErrorModal] = useState({ show: false, message: "" });
+  const [successModal, setSuccessModal] = useState({ show: false, message: "" });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!recaptchaToken) {
-      alert("Vui lòng xác nhận reCAPTCHA");
+      setErrorModal({ show: true, message: "Vui lòng xác nhận reCAPTCHA" });
       return;
     }
 
@@ -41,15 +44,23 @@ export default function Signup() {
         setOtpSent(true);
         if (data.otp_preview) {
           console.log("DEV OTP:", data.otp_preview);
-          alert(`[DEV MODE] Mã OTP của bạn là: ${data.otp_preview}`);
+          setSuccessModal({ show: true, message: `[DEV MODE] Mã OTP của bạn là: ${data.otp_preview}` });
         }
       } else {
-        alert(data.result_message || "Gửi OTP thất bại");
+        setErrorModal({ show: true, message: data.result_message || "Gửi OTP thất bại" });
       }
     } catch (err) {
       console.error("handleSubmit error:", err);
-      alert(`Lỗi hệ thống khi gửi OTP: ${err.message || 'Không thể kết nối với server'}`);
-      console.error(err);
+      const errorMsg = err.response?.data?.result_message || err.message;
+      
+      // Provide user-friendly error messages
+      if (errorMsg.includes('users_username_key') || (errorMsg.includes('duplicate key') && errorMsg.includes('username'))) {
+        setErrorModal({ show: true, message: 'Username đã tồn tại. Vui lòng chọn username khác.' });
+      } else if (errorMsg.includes('users_email_key') || (errorMsg.includes('duplicate key') && errorMsg.includes('email'))) {
+        setErrorModal({ show: true, message: 'Email đã tồn tại. Vui lòng sử dụng email khác.' });
+      } else {
+        setErrorModal({ show: true, message: `Lỗi hệ thống: ${errorMsg || 'Không thể kết nối với server'}` });
+      }
     }
   };
 
@@ -59,13 +70,15 @@ export default function Signup() {
     try {
       const data = await verifyOtp({ email, otp });
       if (data.result_code === 0) {
-        alert("Đăng ký thành công!");
-        navigate("/signin");
+        setSuccessModal({ show: true, message: "Đăng ký thành công!" });
+        setTimeout(() => {
+          navigate("/signin");
+        }, 1500);
       } else {
-        alert(data.result_message || "Xác thực OTP thất bại");
+        setErrorModal({ show: true, message: data.result_message || "Xác thực OTP thất bại" });
       }
     } catch (err) {
-      alert("Lỗi hệ thống khi xác thực OTP");
+      setErrorModal({ show: true, message: "Lỗi hệ thống khi xác thực OTP" });
       console.error(err);
     }
   };
@@ -216,6 +229,64 @@ export default function Signup() {
           </form>
         )}
       </div>
+
+      {/* Error Modal */}
+      {errorModal.show && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setErrorModal({ show: false, message: "" })} />
+          <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 overflow-hidden border border-[#E2E8F0]">
+            <div className="bg-[#3B82F6] px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-white">Thông báo</h2>
+              <button 
+                onClick={() => setErrorModal({ show: false, message: "" })} 
+                className="text-white hover:text-gray-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="px-6 py-6">
+              <p className="text-[#475569] text-base">{errorModal.message}</p>
+            </div>
+            <div className="bg-[#F8FAFC] px-6 py-4 flex items-center justify-end">
+              <button
+                onClick={() => setErrorModal({ show: false, message: "" })}
+                className="px-5 py-2.5 bg-[#3B82F6] hover:bg-[#2563EB] text-white font-medium transition-all duration-200 cursor-pointer shadow-md hover:shadow-lg rounded"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal */}
+      {successModal.show && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setSuccessModal({ show: false, message: "" })} />
+          <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 overflow-hidden border border-[#E2E8F0]">
+            <div className="bg-[#3B82F6] px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-white">Thông báo</h2>
+              <button 
+                onClick={() => setSuccessModal({ show: false, message: "" })} 
+                className="text-white hover:text-gray-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="px-6 py-6">
+              <p className="text-[#475569] text-base">{successModal.message}</p>
+            </div>
+            <div className="bg-[#F8FAFC] px-6 py-4 flex items-center justify-end">
+              <button
+                onClick={() => setSuccessModal({ show: false, message: "" })}
+                className="px-5 py-2.5 bg-[#3B82F6] hover:bg-[#2563EB] text-white font-medium transition-all duration-200 cursor-pointer shadow-md hover:shadow-lg rounded"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
