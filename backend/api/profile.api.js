@@ -100,10 +100,19 @@ router.post('/change-password', requireAuth, async (req, res) => {
 // Ratings summary + list for current user
 router.get('/ratings', requireAuth, async (req, res) => {
   try {
-    const [summary, list] = await Promise.all([
-      ratingService.getRatingSummary(req.user.id),
-      ratingService.getRatingsForUser(req.user.id)
-    ]);
+    // Get user to fetch ratings from users table
+    const user = await userService.findById(req.user.id);
+    
+    const summary = {
+      positive: user.positive_ratings || 0,
+      negative: user.negative_ratings || 0,
+      total: user.total_ratings || 0
+    };
+    
+    // Get detailed ratings list
+    const list = await ratingService.getRatingsForUser(req.user.id);
+    
+    console.log(`[Profile Ratings] User ${req.user.id} - Summary:`, summary, 'Ratings count:', list.length);
 
     res.json({
       result_code: 0,

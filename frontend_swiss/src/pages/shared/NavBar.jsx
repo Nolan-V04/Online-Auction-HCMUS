@@ -119,13 +119,17 @@ export default function Navbar({ onToggleMenu }) {
                             <UserCircle className="w-4 h-4 text-gray-600" />
                             <span className="text-gray-700">Quản lý thông tin cá nhân</span>
                             </button>
-                            <a
-                            href="#"
-                            className="flex items-center space-x-2 px-4 py-3 hover:bg-gray-50"
+                            <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenDropdown(null);
+                              navigate('/my-bids');
+                            }}
+                            className="flex items-center space-x-2 px-4 py-3 hover:bg-gray-50 w-full text-left"
                             >
                             <Package className="w-4 h-4 text-gray-600" />
                             <span className="text-gray-700">Đơn hàng</span>
-                            </a>
+                            </button>
                             <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -137,13 +141,17 @@ export default function Navbar({ onToggleMenu }) {
                             <Heart className="w-4 h-4 text-gray-600" />
                             <span className="text-gray-700">Yêu thích</span>
                             </button>
-                            <a
-                            href="#"
-                            className="flex items-center space-x-2 px-4 py-3 hover:bg-gray-50"
+                            <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenDropdown(null);
+                              navigate('/settings');
+                            }}
+                            className="flex items-center space-x-2 px-4 py-3 hover:bg-gray-50 w-full text-left"
                             >
                             <Settings className="w-4 h-4 text-gray-600" />
                             <span className="text-gray-700">Cài đặt</span>
-                            </a>
+                            </button>
                             {(user?.role_id === 2 || user?.role_id === 3) && (
                               <button
                                 onClick={(e) => {

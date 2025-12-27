@@ -27,6 +27,7 @@ export default function BidModal({ isOpen, onClose, productId, productName, onBi
     setError('');
     try {
       const data = await getBidInfo(productId);
+      console.log('BidModal - Loaded bid info:', data);
       if (data.result_code === 0) {
         setBidInfo(data);
         setBidAmount(data.suggested_bid.toString());
@@ -34,6 +35,7 @@ export default function BidModal({ isOpen, onClose, productId, productName, onBi
         setError(data.result_message);
       }
     } catch (err) {
+      console.error('BidModal - Load bid info error:', err);
       setError('Không thể tải thông tin đấu giá');
     } finally {
       setLoading(false);

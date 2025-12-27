@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Eye, Edit, Trash2, X, Upload } from 'lucide-react';
+import { Plus, Eye, Edit, Trash2, X, Upload, Star, ThumbsUp, ThumbsDown, MessageSquare, XCircle } from 'lucide-react';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,7 +10,9 @@ import {
   createAuctionProduct, 
   updateAuctionProduct, 
   deleteAuctionProduct,
-  uploadImages 
+  uploadImages,
+  rateWinner,
+  cancelTransaction
 } from '@/services/seller.service.js';
 import { fetchCategories } from '@/services/category.service.jsx';
 
@@ -29,6 +31,13 @@ export default function SellerProducts() {
   const [uploadingImages, setUploadingImages] = useState(false);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [activeTab, setActiveTab] = useState('active'); // 'active' or 'ended'
+  
+  // Rating modal state
+  const [ratingModal, setRatingModal] = useState({ show: false, product: null });
+  const [ratingScore, setRatingScore] = useState(null);
+  const [ratingComment, setRatingComment] = useState('');
+  const [submittingRating, setSubmittingRating] = useState(false);
   
   const limit = 8;
   const totalPages = Math.ceil(total / limit);
@@ -48,7 +57,7 @@ export default function SellerProducts() {
 
   useEffect(() => {
     loadData();
-  }, [page]);
+  }, [page, activeTab]);
 
   async function loadData() {
     try {
@@ -58,12 +67,19 @@ export default function SellerProducts() {
         fetchCategories()
       ]);
       const allProducts = productsRes.products || [];
-      setTotal(allProducts.length);
+      
+      // Filter by tab
+      const now = new Date();
+      const filtered = activeTab === 'active' 
+        ? allProducts.filter(p => new Date(p.end_time) > now)
+        : allProducts.filter(p => new Date(p.end_time) <= now && p.highest_bidder);
+      
+      setTotal(filtered.length);
       
       // Manual pagination
       const start = (page - 1) * limit;
       const end = start + limit;
-      setProducts(allProducts.slice(start, end));
+      setProducts(filtered.slice(start, end));
       
       setCategories(categoriesRes.categories || []);
     } catch (error) {
@@ -212,6 +228,52 @@ export default function SellerProducts() {
     }
   };
 
+  const handleRateWinner = async (productId) => {
+    if (ratingScore === null) {
+      alert('Vui lòng chọn đánh giá');
+      return;
+    }
+
+    setSubmittingRating(true);
+    try {
+      const response = await rateWinner(productId, ratingScore, ratingComment);
+
+      if (response.result_code === 0) {
+        alert('Đánh giá thành công!');
+        setRatingModal({ show: false, product: null });
+        setRatingScore(null);
+        setRatingComment('');
+        loadData(); // Reload to update rating status
+      } else {
+        alert(response.result_message || 'Có lỗi xảy ra');
+      }
+    } catch (error) {
+      console.error('Rate winner error:', error);
+      alert(error.response?.data?.result_message || 'Không thể gửi đánh giá');
+    } finally {
+      setSubmittingRating(false);
+    }
+  };
+
+  const handleCancelTransaction = async (productId) => {
+    if (!confirm('Bạn chắc chắn muốn huỷ giao dịch? Người thắng sẽ tự động nhận đánh giá tiêu cực (-1) với lý do "Người thắng không thanh toán"')) {
+      return;
+    }
+
+    try {
+      const response = await cancelTransaction(productId);
+      if (response.result_code === 0) {
+        alert('Đã huỷ giao dịch và đánh giá người thắng');
+        loadData();
+      } else {
+        alert(response.result_message || 'Có lỗi xảy ra');
+      }
+    } catch (error) {
+      console.error('Cancel transaction error:', error);
+      alert(error.response?.data?.result_message || 'Không thể huỷ giao dịch');
+    }
+  };
+
   const formatPrice = (price) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
   };
@@ -256,6 +318,38 @@ export default function SellerProducts() {
           </button>
         </div>
 
+        {/* Tabs */}
+        <div className="bg-white rounded-lg shadow-sm mb-6 border">
+          <div className="flex">
+            <button
+              onClick={() => {
+                setActiveTab('active');
+                setPage(1);
+              }}
+              className={`flex-1 py-4 px-6 font-medium transition ${
+                activeTab === 'active'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              Đang đấu giá
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('ended');
+                setPage(1);
+              }}
+              className={`flex-1 py-4 px-6 font-medium transition ${
+                activeTab === 'ended'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              Đã có người thắng
+            </button>
+          </div>
+        </div>
+
         <div className="mb-4 text-sm text-gray-600">{total} sản phẩm</div>
 
         {/* Products Grid */}
@@ -276,42 +370,77 @@ export default function SellerProducts() {
             {products.map((product) => (
               <div key={product.proid} className="relative">
                 {/* Action Buttons - Top */}
-                <div className="absolute top-2 left-2 right-2 z-20 flex items-center gap-2">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleViewDetails(product); }}
-                    className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-white/95 hover:bg-[#3B82F6] border border-[#E2E8F0] hover:border-[#3B82F6] text-[#64748B] hover:text-white transition-all rounded shadow-sm"
-                    title="Xem chi tiết"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline text-xs">Chi tiết</span>
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleEditClick(product); }}
-                    className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-white/95 hover:bg-[#10B981] border border-[#E2E8F0] hover:border-[#10B981] text-[#64748B] hover:text-white transition-all rounded shadow-sm"
-                    title="Chỉnh sửa"
-                  >
-                    <Edit className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline text-xs">Sửa</span>
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleDeleteClick(product); }}
-                    className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-white/95 hover:bg-[#EF4444] border border-[#E2E8F0] hover:border-[#EF4444] text-[#64748B] hover:text-white transition-all rounded shadow-sm"
-                    title="Xóa"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline text-xs">Xóa</span>
-                  </button>
-                </div>
+                {activeTab === 'active' ? (
+                  <div className="absolute top-2 left-2 right-2 z-20 flex items-center gap-2">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleViewDetails(product); }}
+                      className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-white/95 hover:bg-[#3B82F6] border border-[#E2E8F0] hover:border-[#3B82F6] text-[#64748B] hover:text-white transition-all rounded shadow-sm"
+                      title="Xem chi tiết"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline text-xs">Chi tiết</span>
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleEditClick(product); }}
+                      className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-white/95 hover:bg-[#10B981] border border-[#E2E8F0] hover:border-[#10B981] text-[#64748B] hover:text-white transition-all rounded shadow-sm"
+                      title="Chỉnh sửa"
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline text-xs">Sửa</span>
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDeleteClick(product); }}
+                      className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-white/95 hover:bg-[#EF4444] border border-[#E2E8F0] hover:border-[#EF4444] text-[#64748B] hover:text-white transition-all rounded shadow-sm"
+                      title="Xóa"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline text-xs">Xóa</span>
+                    </button>
+                  </div>
+                ) : (
+                  // Ended tab - Rating and Cancel buttons
+                  <div className="absolute top-2 left-2 right-2 z-20 flex items-center gap-2">
+                    <button
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        setRatingModal({ 
+                          show: true, 
+                          product: product 
+                        }); 
+                      }}
+                      className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-white/95 hover:bg-green-500 border border-[#E2E8F0] hover:border-green-500 text-[#64748B] hover:text-white transition-all rounded shadow-sm"
+                      title="Đánh giá người thắng"
+                    >
+                      <Star className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline text-xs">Đánh giá</span>
+                    </button>
+                    <button
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        if (window.confirm('Bạn có chắc muốn hủy giao dịch? Người thắng sẽ bị trừ 1 điểm đánh giá.')) {
+                          handleCancelTransaction(product.proid);
+                        }
+                      }}
+                      className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-white/95 hover:bg-red-500 border border-[#E2E8F0] hover:border-red-500 text-[#64748B] hover:text-white transition-all rounded shadow-sm"
+                      title="Hủy giao dịch"
+                    >
+                      <XCircle className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline text-xs">Hủy</span>
+                    </button>
+                  </div>
+                )}
 
                 {/* Status Badge */}
                 <div className="absolute top-12 left-2 z-10">
                   <span className={`inline-block px-2.5 py-1 text-xs font-medium rounded-full shadow-sm ${
+                    activeTab === 'ended' || product.highest_bidder ? 'bg-blue-100 text-blue-700' :
                     product.status === 'active' ? 'bg-green-100 text-green-700' :
                     product.status === 'ended' ? 'bg-gray-100 text-gray-700' :
                     product.status === 'sold' ? 'bg-blue-100 text-blue-700' :
                     'bg-yellow-100 text-yellow-700'
                   }`}>
-                    {product.status === 'active' ? 'Đang đấu giá' :
+                    {activeTab === 'ended' || product.highest_bidder ? 'Đã bán' :
+                     product.status === 'active' ? 'Đang đấu giá' :
                      product.status === 'ended' ? 'Đã kết thúc' :
                      product.status === 'sold' ? 'Đã bán' : 'Chờ duyệt'}
                   </span>
@@ -691,6 +820,116 @@ export default function SellerProducts() {
                   className="px-5 py-2.5 bg-[#3B82F6] hover:bg-[#2563EB] text-white font-medium transition-all"
                 >
                   Xóa
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Rating Modal */}
+        {ratingModal.show && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/50">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 overflow-hidden border border-[#E2E8F0]">
+              <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-4 flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                  <Star className="w-5 h-5" />
+                  Đánh giá người thắng
+                </h2>
+                <button 
+                  onClick={() => {
+                    setRatingModal({ show: false, product: null });
+                    setRatingScore(null);
+                    setRatingComment('');
+                  }}
+                  className="text-white hover:text-gray-200 transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="px-6 py-6 space-y-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-blue-800">
+                    <strong>Sản phẩm:</strong> {ratingModal.product?.proname}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Đánh giá người thắng đấu giá:
+                  </label>
+                  <div className="flex gap-3 justify-center">
+                    <button
+                      type="button"
+                      onClick={() => setRatingScore(1)}
+                      className={`flex-1 py-3 px-4 rounded-lg border-2 transition-all ${
+                        ratingScore === 1
+                          ? 'bg-green-500 border-green-600 text-white shadow-lg scale-105'
+                          : 'bg-white border-gray-300 text-gray-700 hover:border-green-400'
+                      }`}
+                    >
+                      <ThumbsUp className="w-6 h-6 mx-auto mb-1" />
+                      <div className="text-sm font-medium">Tích cực (+1)</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRatingScore(-1)}
+                      className={`flex-1 py-3 px-4 rounded-lg border-2 transition-all ${
+                        ratingScore === -1
+                          ? 'bg-red-500 border-red-600 text-white shadow-lg scale-105'
+                          : 'bg-white border-gray-300 text-gray-700 hover:border-red-400'
+                      }`}
+                    >
+                      <ThumbsDown className="w-6 h-6 mx-auto mb-1" />
+                      <div className="text-sm font-medium">Tiêu cực (-1)</div>
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4" />
+                    Nhận xét:
+                  </label>
+                  <textarea
+                    value={ratingComment}
+                    onChange={(e) => setRatingComment(e.target.value)}
+                    placeholder="Chia sẻ trải nghiệm của bạn về người thắng đấu giá..."
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    rows={4}
+                  />
+                </div>
+              </div>
+
+              <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRatingModal({ show: false, product: null });
+                    setRatingScore(null);
+                    setRatingComment('');
+                  }}
+                  className="px-5 py-2.5 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg transition-all"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRateWinner(ratingModal.product.proid)}
+                  disabled={!ratingScore || submittingRating}
+                  className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {submittingRating ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Đang gửi...
+                    </>
+                  ) : (
+                    <>
+                      <Star className="w-4 h-4" />
+                      Gửi đánh giá
+                    </>
+                  )}
                 </button>
               </div>
             </div>

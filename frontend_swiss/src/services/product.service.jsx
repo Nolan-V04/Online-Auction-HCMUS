@@ -146,14 +146,10 @@ export function ProductCard({ p, onView, onAdd, onAddToWatchlist }) {
           Đăng ngày: {formatDate(p.created_at)}
         </div>
 
-        <div className="text-red-600 font-semibold text-base">
-          {formatPrice(p.price)}
-        </div>
-
         <div className="text-xs text-gray-600">
-          Cao nhất:{' '}
-          <span className="font-medium">
-            {p.highest_bidder || 'Chưa có'}
+          Giá cao nhất:{' '}
+          <span className="font-semibold text-red-600">
+            {formatPrice(p.price)}
           </span>
         </div>
 

@@ -48,3 +48,19 @@ export async function uploadImages(files) {
   });
   return res.data;
 }
+
+export async function rateWinner(productId, score, comment) {
+  const res = await axiosInstance.post('/api/seller/products/rate-winner', {
+    productId,
+    score,
+    comment
+  });
+  return res.data;
+}
+
+export async function cancelTransaction(productId) {
+  const res = await axiosInstance.post('/api/seller/products/cancel-transaction', {
+    productId
+  });
+  return res.data;
+}

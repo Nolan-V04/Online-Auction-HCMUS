@@ -50,3 +50,20 @@ export async function getBidHistory(productId) {
     throw error;
   }
 }
+
+// Buy now - immediately purchase at buy_now_price
+export async function buyNow(productId) {
+  try {
+    const resp = await instance.post('/buy-now', {
+      productId
+    });
+    return resp.data;
+  } catch (error) {
+    console.error('buyNow error:', error.response?.data || error.message);
+    if (error.response?.data) {
+      return error.response.data;
+    }
+    throw error;
+  }
+}
+

@@ -19,6 +19,8 @@ import Signup from "@/pages/shared/Signup";
 import ProductDetail from "@/pages/shared/itemdetails.jsx";
 import WatchlistPage from "@/pages/shared/WatchlistPage.jsx";
 import ProfilePage from "@/pages/shared/Profile.jsx";
+import Settings from "@/pages/shared/Settings.jsx";
+import MyBids from "@/pages/shared/MyBids.jsx";
 import SellerProducts from "@/pages/seller/SellerProducts.jsx";
 
 const router = createBrowserRouter([
@@ -52,6 +54,14 @@ const router = createBrowserRouter([
       {
         path: "/profile",
         element: <ProfilePage />,
+      },
+      {
+        path: "/settings",
+        element: <Settings />,
+      },
+      {
+        path: "/my-bids",
+        element: <MyBids />,
       },
       {
         path: "/seller/products",

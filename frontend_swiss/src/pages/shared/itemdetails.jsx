@@ -4,7 +4,7 @@ import { Heart, Edit, X, Trash2, Upload } from 'lucide-react';
 import { fetchProductById, fetchRelatedProducts } from '@/services/product.service.jsx';
 import { useAuth } from '@/contexts/AuthContext';
 import { addToWatchlist } from '@/services/watchlist.service.js';
-import { getBidHistory } from '@/services/bid.service.js';
+import { getBidHistory, buyNow } from '@/services/bid.service.js';
 import { updateAuctionProduct, deleteAuctionProduct, uploadImages } from '@/services/seller.service.js';
 import { fetchCategories } from '@/services/category.service.jsx';
 import BidModal from '@/components/BidModal';
@@ -62,6 +62,7 @@ export default function ItemDetails() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showRejectConfirm, setShowRejectConfirm] = useState(false);
+  const [showBuyNowConfirm, setShowBuyNowConfirm] = useState(false);
   const [categories, setCategories] = useState([]);
   const [formData, setFormData] = useState({
     proname: '',
@@ -84,6 +85,7 @@ export default function ItemDetails() {
   const [submittingAnswer, setSubmittingAnswer] = useState(false);
   const [permissionRequests, setPermissionRequests] = useState([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
+  const [buyingNow, setBuyingNow] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -237,6 +239,44 @@ export default function ItemDetails() {
         bid_count: (prev.bid_count || 0) + 1
       }));
       alert('Đặt giá thành công!');
+    }
+  }
+
+  async function handleBuyNow() {
+    if (!isLoggedIn) {
+      alert('Vui lòng đăng nhập để mua sản phẩm');
+      navigate('/signin');
+      return;
+    }
+
+    if (!buy_now_price) {
+      alert('Sản phẩm này không có giá mua ngay. Vui lòng tham gia đấu giá để mua sản phẩm.');
+      return;
+    }
+
+    setShowBuyNowConfirm(true);
+  }
+
+  async function confirmBuyNow() {
+    setShowBuyNowConfirm(false);
+    setBuyingNow(true);
+    try {
+      const res = await buyNow(proid);
+      if (res.result_code === 0) {
+        alert(res.result_message);
+        // Reload product to show updated status
+        const updatedProduct = await fetchProductById(proid);
+        setProduct(updatedProduct);
+        const bh = await getBidHistory(proid);
+        setBidHistory(bh.bids || []);
+      } else {
+        alert(res.result_message || 'Không thể mua sản phẩm');
+      }
+    } catch (err) {
+      console.error('Buy now error:', err);
+      alert('Lỗi khi mua sản phẩm');
+    } finally {
+      setBuyingNow(false);
     }
   }
 
@@ -743,93 +783,6 @@ export default function ItemDetails() {
             )}
           </div>
 
-          {/* BID PERMISSION REQUESTS (Seller Only) */}
-          {isOwner && (
-            <div className="bg-white rounded shadow p-6">
-              <h2 className="font-semibold text-lg mb-4">Yêu cầu xin phép đấu giá</h2>
-
-              {loadingRequests ? (
-                <p className="text-sm text-gray-500">Đang tải...</p>
-              ) : permissionRequests.length === 0 ? (
-                <p className="text-sm text-gray-500">Chưa có yêu cầu nào</p>
-              ) : (
-                <div className="space-y-4">
-                  {permissionRequests.map((request) => {
-                    const ratingPercentage = request.bidder_total_ratings > 0
-                      ? ((request.bidder_positive_ratings / request.bidder_total_ratings) * 100).toFixed(1)
-                      : '0.0';
-                    
-                    return (
-                      <div key={request.request_id} className={`border rounded-lg p-4 ${
-                        request.status === 'pending' ? 'bg-yellow-50 border-yellow-200' :
-                        request.status === 'approved' ? 'bg-green-50 border-green-200' :
-                        'bg-red-50 border-red-200'
-                      }`}>
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="font-medium text-gray-900">{request.bidder_name}</span>
-                              <span className={`text-xs px-2 py-0.5 rounded ${
-                                request.status === 'pending' ? 'bg-yellow-200 text-yellow-800' :
-                                request.status === 'approved' ? 'bg-green-200 text-green-800' :
-                                'bg-red-200 text-red-800'
-                              }`}>
-                                {request.status === 'pending' ? 'Chờ xét duyệt' :
-                                 request.status === 'approved' ? 'Đã chấp nhận' : 'Đã từ chối'}
-                              </span>
-                            </div>
-                            
-                            <div className="text-sm space-y-1">
-                              {request.bidder_email && (
-                                <p className="text-gray-600">
-                                  <span className="font-medium">Email:</span> {request.bidder_email}
-                                </p>
-                              )}
-                              <p className="text-gray-600">
-                                <span className="font-medium">Đánh giá:</span>{' '}
-                                <span className={`${
-                                  parseFloat(ratingPercentage) >= 80 ? 'text-green-600' : 'text-red-600'
-                                } font-medium`}>
-                                  {ratingPercentage}%
-                                </span>
-                                {' '}({request.bidder_positive_ratings}+ / {request.bidder_negative_ratings}-)
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                Yêu cầu lúc: {new Date(request.requested_at).toLocaleString('vi-VN')}
-                              </p>
-                              {request.reviewed_at && (
-                                <p className="text-xs text-gray-500">
-                                  Xét duyệt lúc: {new Date(request.reviewed_at).toLocaleString('vi-VN')}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          {request.status === 'pending' && (
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => handlePermissionAction(request.request_id, 'approve')}
-                                className="px-3 py-1.5 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition"
-                              >
-                                Chấp nhận
-                              </button>
-                              <button
-                                onClick={() => handlePermissionAction(request.request_id, 'reject')}
-                                className="px-3 py-1.5 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition"
-                              >
-                                Từ chối
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
         </div>
 
         {/* RIGHT */}
@@ -892,21 +845,43 @@ export default function ItemDetails() {
                 <span>Kết thúc</span>
                 <span>{relativeTime(end_time)}</span>
               </div>
+
+              {buy_now_price && (
+                <div className="flex justify-between border-t pt-2 mt-2">
+                  <span className="font-semibold text-green-600">Giá mua ngay</span>
+                  <span className="font-bold text-green-600">{formatPrice(buy_now_price)}</span>
+                </div>
+              )}
             </div>
 
-            <button 
-              onClick={() => {
-                if (!isLoggedIn) {
-                  alert('Vui lòng đăng nhập để đặt giá');
-                  navigate('/signin');
-                  return;
-                }
-                setBidModalOpen(true);
-              }}
-              className="w-full mt-4 bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
-            >
-              Đặt giá
-            </button>
+            <div className="space-y-2 mt-4">
+              <button 
+                onClick={() => {
+                  if (!isLoggedIn) {
+                    alert('Vui lòng đăng nhập để đặt giá');
+                    navigate('/signin');
+                    return;
+                  }
+                  setBidModalOpen(true);
+                }}
+                className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+              >
+                Đặt giá
+              </button>
+
+              <button 
+                onClick={handleBuyNow}
+                disabled={buyingNow || !buy_now_price}
+                className={`w-full py-2 rounded transition ${
+                  !buy_now_price 
+                    ? 'bg-gray-300 text-gray-600 cursor-not-allowed' 
+                    : 'bg-green-600 text-white hover:bg-green-700'
+                } ${buyingNow ? 'opacity-50 cursor-wait' : ''}`}
+                title={!buy_now_price ? 'Sản phẩm này không có giá mua ngay. Vui lòng tham gia đấu giá.' : 'Mua ngay với giá cố định'}
+              >
+                {buyingNow ? 'Đang xử lý...' : (buy_now_price ? 'Mua ngay' : 'Chỉ có thể đấu giá')}
+              </button>
+            </div>
           </div>
 
           {/* SELLER */}
@@ -1028,6 +1003,93 @@ export default function ItemDetails() {
               </div>
             )}
           </div>
+
+          {/* BID PERMISSION REQUESTS (Seller Only) */}
+          {isOwner && (
+            <div className="bg-white rounded shadow p-6">
+              <h2 className="font-semibold text-lg mb-4">Yêu cầu xin phép đấu giá</h2>
+
+              {loadingRequests ? (
+                <p className="text-sm text-gray-500">Đang tải...</p>
+              ) : permissionRequests.length === 0 ? (
+                <p className="text-sm text-gray-500">Chưa có yêu cầu nào</p>
+              ) : (
+                <div className="space-y-4">
+                  {permissionRequests.map((request) => {
+                    const ratingPercentage = request.bidder_total_ratings > 0
+                      ? ((request.bidder_positive_ratings / request.bidder_total_ratings) * 100).toFixed(1)
+                      : '0.0';
+                    
+                    return (
+                      <div key={request.request_id} className={`border rounded-lg p-4 ${
+                        request.status === 'pending' ? 'bg-yellow-50 border-yellow-200' :
+                        request.status === 'approved' ? 'bg-green-50 border-green-200' :
+                        'bg-red-50 border-red-200'
+                      }`}>
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="font-medium text-gray-900">{request.bidder_name}</span>
+                              <span className={`text-xs px-2 py-0.5 rounded ${
+                                request.status === 'pending' ? 'bg-yellow-200 text-yellow-800' :
+                                request.status === 'approved' ? 'bg-green-200 text-green-800' :
+                                'bg-red-200 text-red-800'
+                              }`}>
+                                {request.status === 'pending' ? 'Chờ xét duyệt' :
+                                 request.status === 'approved' ? 'Đã chấp nhận' : 'Đã từ chối'}
+                              </span>
+                            </div>
+                            
+                            <div className="text-sm space-y-1">
+                              {request.bidder_email && (
+                                <p className="text-gray-600">
+                                  <span className="font-medium">Email:</span> {request.bidder_email}
+                                </p>
+                              )}
+                              <p className="text-gray-600">
+                                <span className="font-medium">Đánh giá:</span>{' '}
+                                <span className={`${
+                                  parseFloat(ratingPercentage) >= 80 ? 'text-green-600' : 'text-red-600'
+                                } font-medium`}>
+                                  {ratingPercentage}%
+                                </span>
+                                {' '}({request.bidder_positive_ratings}+ / {request.bidder_negative_ratings}-)
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Yêu cầu lúc: {new Date(request.requested_at).toLocaleString('vi-VN')}
+                              </p>
+                              {request.reviewed_at && (
+                                <p className="text-xs text-gray-500">
+                                  Xét duyệt lúc: {new Date(request.reviewed_at).toLocaleString('vi-VN')}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          {request.status === 'pending' && (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handlePermissionAction(request.request_id, 'approve')}
+                                className="px-3 py-1.5 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition"
+                              >
+                                Chấp nhận
+                              </button>
+                              <button
+                                onClick={() => handlePermissionAction(request.request_id, 'reject')}
+                                className="px-3 py-1.5 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition"
+                              >
+                                Từ chối
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -1369,6 +1431,50 @@ export default function ItemDetails() {
                 className="px-5 py-2.5 bg-blue-600 hover:bg-red-700 text-white font-medium transition-all shadow-md"
               >
                 Xóa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Buy Now Confirmation Modal */}
+      {showBuyNowConfirm && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4 bg-black/50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="bg-blue-600 px-6 py-4">
+              <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                <Heart className="w-5 h-5" />
+                Xác nhận mua ngay
+              </h2>
+            </div>
+            <div className="px-6 py-6">
+              <p className="text-[#475569] mb-4">
+                Bạn có chắc chắn muốn mua sản phẩm "<strong>{proname}</strong>" không?
+              </p>
+              <div className="bg-green-50 border border-green-200 rounded p-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-700">Giá mua ngay:</span>
+                  <span className="text-xl font-bold text-green-600">{formatPrice(buy_now_price)}</span>
+                </div>
+              </div>
+              <p className="text-sm text-gray-600 mt-4">
+                Sau khi mua ngay, đấu giá sẽ kết thúc và bạn sẽ là người thắng cuộc.
+              </p>
+            </div>
+            <div className="bg-[#F8FAFC] px-6 py-4 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setShowBuyNowConfirm(false)}
+                disabled={buyingNow}
+                className="px-5 py-2.5 border border-[#E2E8F0] bg-white hover:bg-[#F8FAFC] text-[#64748B] font-medium transition-all disabled:opacity-50"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={confirmBuyNow}
+                disabled={buyingNow}
+                className="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white font-medium transition-all shadow-md disabled:opacity-50"
+              >
+                {buyingNow ? 'Đang xử lý...' : 'Xác nhận mua'}
               </button>
             </div>
           </div>

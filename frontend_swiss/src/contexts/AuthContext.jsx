@@ -8,10 +8,14 @@ export function AuthProvider({ children }) {
   const [isAuthReady, setIsAuthReady] = useState(false);
 
   const refreshUser = useCallback(async () => {
+    console.log('[AuthContext] Refreshing user...');
     const data = await apiGetCurrentUser();
+    console.log('[AuthContext] getCurrentUser response:', data);
     if (data && data.result_code === 0 && data.user) {
+      console.log('[AuthContext] User authenticated:', data.user);
       setUser(data.user);
     } else {
+      console.log('[AuthContext] User not authenticated');
       setUser(null);
     }
   }, []);
@@ -26,10 +30,12 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     // Fetch current user on mount
+    console.log('[AuthContext] Component mounted, fetching user...');
     (async () => {
       try {
         await refreshUser();
       } finally {
+        console.log('[AuthContext] Auth ready');
         setIsAuthReady(true);
       }
     })();

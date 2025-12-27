@@ -495,9 +495,6 @@ router.post('/:proid/request-bid-permission', async (req, res) => {
       bidder_id: req.user.id,
       bidder_name: req.user.username || req.user.email,
       bidder_email: req.user.email,
-      bidder_positive_ratings: req.user.positive_ratings || 0,
-      bidder_negative_ratings: req.user.negative_ratings || 0,
-      bidder_total_ratings: req.user.total_ratings || 0,
       status: 'pending'
     });
 
@@ -555,9 +552,15 @@ router.get('/:proid/bid-permission-requests', async (req, res) => {
 
     const db = req.app.get('db');
     const requests = await db('bid_permission_requests')
-      .where('product_id', proid)
-      .orderBy('requested_at', 'desc')
-      .select('*');
+      .leftJoin('users', 'bid_permission_requests.bidder_id', 'users.id')
+      .where('bid_permission_requests.product_id', proid)
+      .orderBy('bid_permission_requests.requested_at', 'desc')
+      .select(
+        'bid_permission_requests.*',
+        'users.positive_ratings as bidder_positive_ratings',
+        'users.negative_ratings as bidder_negative_ratings',
+        'users.total_ratings as bidder_total_ratings'
+      );
 
     res.json({
       result_code: 0,

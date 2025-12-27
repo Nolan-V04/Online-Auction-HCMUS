@@ -225,4 +225,189 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// Rate winner (bidder) - seller rates the auction winner
+router.post('/rate-winner', async (req, res) => {
+  try {
+    const sellerId = req.user.id;
+    const { productId, score, comment } = req.body;
+
+    if (!productId || (score !== 1 && score !== -1)) {
+      return res.status(400).json({
+        result_code: -1,
+        result_message: 'Thiếu thông tin hoặc điểm đánh giá không hợp lệ'
+      });
+    }
+
+    // Get product and verify ownership
+    const product = await db('products')
+      .where({ proid: productId, seller_id: sellerId })
+      .first();
+
+    if (!product) {
+      return res.status(404).json({
+        result_code: -1,
+        result_message: 'Không tìm thấy sản phẩm hoặc bạn không phải người bán'
+      });
+    }
+
+    // Check if auction has ended and has a winner
+    if (!product.highest_bidder) {
+      return res.status(400).json({
+        result_code: -1,
+        result_message: 'Sản phẩm chưa có người thắng'
+      });
+    }
+
+    if (new Date(product.end_time) > new Date()) {
+      return res.status(400).json({
+        result_code: -1,
+        result_message: 'Đấu giá chưa kết thúc'
+      });
+    }
+
+    // Check if already rated
+    const existingRating = await db('user_rating_reviews')
+      .where({
+        product_id: productId,
+        reviewer_id: sellerId
+      })
+      .first();
+
+    if (existingRating) {
+      return res.status(400).json({
+        result_code: -1,
+        result_message: 'Bạn đã đánh giá người thắng này rồi'
+      });
+    }
+
+    // Insert rating
+    await db('user_rating_reviews').insert({
+      product_id: productId,
+      reviewer_id: sellerId,
+      target_user_id: product.highest_bidder,
+      score: score,
+      comment: comment || null,
+      created_at: new Date()
+    });
+
+    // Update winner ratings
+    const winner = await db('users').where({ id: product.highest_bidder }).first();
+    const newPositive = (winner.positive_ratings || 0) + (score === 1 ? 1 : 0);
+    const newNegative = (winner.negative_ratings || 0) + (score === -1 ? 1 : 0);
+    const newTotal = (winner.total_ratings || 0) + 1;
+
+    await db('users')
+      .where({ id: product.highest_bidder })
+      .update({
+        positive_ratings: newPositive,
+        negative_ratings: newNegative,
+        total_ratings: newTotal
+      });
+
+    res.json({
+      result_code: 0,
+      result_message: 'Đánh giá thành công'
+    });
+
+  } catch (error) {
+    console.error('Rate winner error:', error);
+    res.status(500).json({
+      result_code: -1,
+      result_message: 'Lỗi khi đánh giá người thắng'
+    });
+  }
+});
+
+// Cancel transaction and auto-rate winner -1
+router.post('/cancel-transaction', async (req, res) => {
+  try {
+    const sellerId = req.user.id;
+    const { productId } = req.body;
+
+    if (!productId) {
+      return res.status(400).json({
+        result_code: -1,
+        result_message: 'Thiếu thông tin sản phẩm'
+      });
+    }
+
+    // Get product and verify ownership
+    const product = await db('products')
+      .where({ proid: productId, seller_id: sellerId })
+      .first();
+
+    if (!product) {
+      return res.status(404).json({
+        result_code: -1,
+        result_message: 'Không tìm thấy sản phẩm hoặc bạn không phải người bán'
+      });
+    }
+
+    // Check if has a winner
+    if (!product.highest_bidder) {
+      return res.status(400).json({
+        result_code: -1,
+        result_message: 'Sản phẩm chưa có người thắng'
+      });
+    }
+
+    // Check if auction has ended
+    if (new Date(product.end_time) > new Date()) {
+      return res.status(400).json({
+        result_code: -1,
+        result_message: 'Đấu giá chưa kết thúc'
+      });
+    }
+
+    // Check if already rated (can't cancel twice)
+    const existingRating = await db('user_rating_reviews')
+      .where({
+        product_id: productId,
+        reviewer_id: sellerId
+      })
+      .first();
+
+    if (existingRating) {
+      return res.status(400).json({
+        result_code: -1,
+        result_message: 'Giao dịch đã được xử lý trước đó'
+      });
+    }
+
+    // Auto rate winner -1 with standard comment
+    await db('user_rating_reviews').insert({
+      product_id: productId,
+      reviewer_id: sellerId,
+      target_user_id: product.highest_bidder,
+      score: -1,
+      comment: 'Người thắng không thanh toán',
+      created_at: new Date()
+    });
+
+    // Update winner ratings
+    const winner = await db('users').where({ id: product.highest_bidder }).first();
+    const newNegative = (winner.negative_ratings || 0) + 1;
+    const newTotal = (winner.total_ratings || 0) + 1;
+
+    await db('users')
+      .where({ id: product.highest_bidder })
+      .update({
+        negative_ratings: newNegative,
+        total_ratings: newTotal
+      });
+
+    res.json({
+      result_code: 0,
+      result_message: 'Đã huỷ giao dịch và đánh giá người thắng'
+    });
+
+  } catch (error) {
+    console.error('Cancel transaction error:', error);
+    res.status(500).json({
+      result_code: -1,
+      result_message: 'Lỗi khi huỷ giao dịch'
+    });
+  }
+});
+
 export default router;
