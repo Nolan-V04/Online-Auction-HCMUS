@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLoading } from '@/contexts/LoadingContext';
-import { Lock, Mail, Check, X } from 'lucide-react';
+import { Lock, Mail, Check, X, KeyRound } from 'lucide-react';
 import axios from 'axios';
 
 export default function Settings() {
@@ -18,6 +18,15 @@ export default function Settings() {
   const [loading, setLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+
+  // Forgot Password States
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotOtp, setForgotOtp] = useState('');
+  const [forgotNewPassword, setForgotNewPassword] = useState('');
+  const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
+  const [forgotShowOtpInput, setForgotShowOtpInput] = useState(false);
+  const [forgotOtpSent, setForgotOtpSent] = useState(false);
+  const [forgotMessage, setForgotMessage] = useState({ type: '', text: '' });
 
   if (!isLoggedIn) {
     navigate('/signin');
@@ -115,6 +124,105 @@ export default function Settings() {
     } catch (error) {
       console.error('Verify OTP error:', error);
       setMessage({ 
+        type: 'error', 
+        text: error.response?.data?.result_message || 'Không thể xác minh OTP. Vui lòng thử lại' 
+      });
+    } finally {
+      setLoading(false);
+      stopLoading();
+    }
+  };
+
+  // ===== FORGOT PASSWORD HANDLERS =====
+  const handleRequestForgotPasswordOtp = async (e) => {
+    e.preventDefault();
+
+    if (!forgotEmail) {
+      setForgotMessage({ type: 'error', text: 'Vui lòng nhập email' });
+      return;
+    }
+
+    setLoading(true);
+    setForgotMessage({ type: '', text: '' });
+    startLoading();
+
+    try {
+      const response = await axios.post('http://localhost:3000/auth/request-forgot-password-otp', {
+        email: forgotEmail
+      });
+
+      if (response.data.result_code === 0) {
+        setForgotOtpSent(true);
+        setForgotShowOtpInput(true);
+        setForgotMessage({ type: 'success', text: 'Mã OTP đã được gửi đến email của bạn' });
+      } else {
+        setForgotMessage({ type: 'error', text: response.data.result_message || 'Có lỗi xảy ra' });
+      }
+    } catch (error) {
+      console.error('Request forgot password OTP error:', error);
+      setForgotMessage({ 
+        type: 'error', 
+        text: error.response?.data?.result_message || 'Không thể gửi OTP. Vui lòng thử lại' 
+      });
+    } finally {
+      setLoading(false);
+      stopLoading();
+    }
+  };
+
+  const handleVerifyForgotPasswordOtp = async (e) => {
+    e.preventDefault();
+
+    if (!forgotOtp || forgotOtp.length !== 6) {
+      setForgotMessage({ type: 'error', text: 'Vui lòng nhập mã OTP 6 số' });
+      return;
+    }
+
+    if (!forgotNewPassword || !forgotConfirmPassword) {
+      setForgotMessage({ type: 'error', text: 'Vui lòng điền đầy đủ thông tin mật khẩu' });
+      return;
+    }
+
+    if (forgotNewPassword !== forgotConfirmPassword) {
+      setForgotMessage({ type: 'error', text: 'Mật khẩu mới không khớp' });
+      return;
+    }
+
+    if (forgotNewPassword.length < 6) {
+      setForgotMessage({ type: 'error', text: 'Mật khẩu mới phải có ít nhất 6 ký tự' });
+      return;
+    }
+
+    setLoading(true);
+    setForgotMessage({ type: '', text: '' });
+    startLoading();
+
+    try {
+      const response = await axios.post('http://localhost:3000/auth/verify-forgot-password-otp', {
+        email: forgotEmail,
+        otp: forgotOtp,
+        newPassword: forgotNewPassword
+      });
+
+      if (response.data.result_code === 0) {
+        setForgotMessage({ type: 'success', text: 'Đặt lại mật khẩu thành công!' });
+        
+        // Reset form
+        setTimeout(() => {
+          setForgotEmail('');
+          setForgotOtp('');
+          setForgotNewPassword('');
+          setForgotConfirmPassword('');
+          setForgotShowOtpInput(false);
+          setForgotOtpSent(false);
+          setForgotMessage({ type: '', text: '' });
+        }, 2000);
+      } else {
+        setForgotMessage({ type: 'error', text: response.data.result_message || 'Mã OTP không chính xác' });
+      }
+    } catch (error) {
+      console.error('Verify forgot password OTP error:', error);
+      setForgotMessage({ 
         type: 'error', 
         text: error.response?.data?.result_message || 'Không thể xác minh OTP. Vui lòng thử lại' 
       });
@@ -280,6 +388,154 @@ export default function Settings() {
                     className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? 'Đang xác minh...' : 'Xác nhận đổi mật khẩu'}
+                  </button>
+                </>
+              )}
+            </div>
+          </form>
+        </div>
+
+        {/* Forgot Password Card */}
+        <div className="bg-white rounded-lg shadow-md p-6 mt-6">
+          <div className="flex items-center gap-2 mb-6">
+            <KeyRound className="w-5 h-5 text-gray-700" />
+            <h2 className="text-xl font-semibold text-gray-800">Quên mật khẩu</h2>
+          </div>
+
+          <p className="text-gray-600 mb-4">
+            Nếu bạn quên mật khẩu, hãy nhập email để nhận mã OTP và đặt lại mật khẩu mới.
+          </p>
+
+          {/* Forgot Password Message Display */}
+          {forgotMessage.text && (
+            <div className={`mb-4 p-4 rounded-lg flex items-center gap-2 ${
+              forgotMessage.type === 'success' 
+                ? 'bg-green-50 border border-green-200 text-green-800' 
+                : 'bg-red-50 border border-red-200 text-red-800'
+            }`}>
+              {forgotMessage.type === 'success' ? (
+                <Check className="w-5 h-5" />
+              ) : (
+                <X className="w-5 h-5" />
+              )}
+              <p>{forgotMessage.text}</p>
+            </div>
+          )}
+
+          <form onSubmit={forgotShowOtpInput ? handleVerifyForgotPasswordOtp : handleRequestForgotPasswordOtp} className="space-y-4">
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                value={forgotEmail}
+                onChange={(e) => setForgotEmail(e.target.value)}
+                disabled={forgotOtpSent}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+                placeholder="Nhập email của bạn"
+              />
+            </div>
+
+            {/* OTP and New Password - Only show after OTP is sent */}
+            {forgotShowOtpInput && (
+              <>
+                <div className="border-t pt-4">
+                  <div className="flex items-center gap-2 mb-4 text-blue-600">
+                    <Mail className="w-5 h-5" />
+                    <p className="text-sm">Mã OTP đã được gửi đến email: <strong>{forgotEmail}</strong></p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Mã OTP <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={forgotOtp}
+                      onChange={(e) => setForgotOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center text-2xl tracking-widest"
+                      placeholder="000000"
+                      maxLength={6}
+                    />
+                    <p className="text-sm text-gray-500 mt-2">Nhập mã OTP 6 số đã được gửi đến email</p>
+                  </div>
+                </div>
+
+                {/* New Password */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Mật khẩu mới <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    value={forgotNewPassword}
+                    onChange={(e) => setForgotNewPassword(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Nhập mật khẩu mới (ít nhất 6 ký tự)"
+                  />
+                </div>
+
+                {/* Confirm Password */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Xác nhận mật khẩu mới <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    value={forgotConfirmPassword}
+                    onChange={(e) => setForgotConfirmPassword(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Nhập lại mật khẩu mới"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Buttons */}
+            <div className="flex gap-3 pt-4">
+              {!forgotOtpSent ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setForgotEmail('');
+                      setForgotMessage({ type: '', text: '' });
+                    }}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                  >
+                    Xóa
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? 'Đang xử lý...' : 'Gửi mã OTP'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setForgotOtpSent(false);
+                      setForgotShowOtpInput(false);
+                      setForgotOtp('');
+                      setForgotNewPassword('');
+                      setForgotConfirmPassword('');
+                      setForgotMessage({ type: '', text: '' });
+                    }}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                  >
+                    Quay lại
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? 'Đang xác minh...' : 'Đặt lại mật khẩu'}
                   </button>
                 </>
               )}

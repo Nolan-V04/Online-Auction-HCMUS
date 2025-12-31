@@ -137,6 +137,127 @@ router.post('/request-password-change-otp', async (req, res) => {
   }
 });
 
+// ===== REQUEST FORGOT PASSWORD OTP (No authentication needed) =====
+router.post('/request-forgot-password-otp', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        result_code: -1,
+        result_message: 'Vui lòng nhập email'
+      });
+    }
+
+    // Find user by email
+    const user = await db('users').where({ email }).first();
+
+    if (!user) {
+      return res.status(404).json({
+        result_code: -1,
+        result_message: 'Không tìm thấy tài khoản với email này'
+      });
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    // Store OTP with email as key for forgot password
+    otpStore.set(`forgot_${email}`, {
+      otp,
+      userId: user.id,
+      expiresAt
+    });
+
+    // Send OTP email
+    const emailResult = await sendPasswordChangeOtpEmail(user.email, otp, user.name || user.username);
+
+    if (!emailResult.success) {
+      return res.status(500).json({
+        result_code: -1,
+        result_message: 'Không thể gửi email OTP'
+      });
+    }
+
+    res.json({
+      result_code: 0,
+      result_message: 'Mã OTP đã được gửi đến email của bạn'
+    });
+
+  } catch (error) {
+    console.error('Request forgot password OTP error:', error);
+    res.status(500).json({
+      result_code: -1,
+      result_message: 'Lỗi server'
+    });
+  }
+});
+
+// ===== VERIFY FORGOT PASSWORD OTP AND RESET PASSWORD (No authentication needed) =====
+router.post('/verify-forgot-password-otp', async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({
+        result_code: -1,
+        result_message: 'Thiếu thông tin'
+      });
+    }
+
+    // Get stored OTP
+    const storedData = otpStore.get(`forgot_${email}`);
+
+    if (!storedData) {
+      return res.status(400).json({
+        result_code: -1,
+        result_message: 'Không tìm thấy mã OTP. Vui lòng yêu cầu mã mới'
+      });
+    }
+
+    // Check if OTP expired
+    if (Date.now() > storedData.expiresAt) {
+      otpStore.delete(`forgot_${email}`);
+      return res.status(400).json({
+        result_code: -1,
+        result_message: 'Mã OTP đã hết hạn. Vui lòng yêu cầu mã mới'
+      });
+    }
+
+    // Verify OTP
+    if (otp !== storedData.otp) {
+      return res.status(400).json({
+        result_code: -1,
+        result_message: 'Mã OTP không chính xác'
+      });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password in database
+    await db('users')
+      .where({ id: storedData.userId })
+      .update({ password: hashedPassword });
+
+    // Clear OTP from store
+    otpStore.delete(`forgot_${email}`);
+
+    res.json({
+      result_code: 0,
+      result_message: 'Đặt lại mật khẩu thành công'
+    });
+
+  } catch (error) {
+    console.error('Verify forgot password OTP error:', error);
+    res.status(500).json({
+      result_code: -1,
+      result_message: 'Lỗi server'
+    });
+  }
+});
+
 // ===== VERIFY OTP AND CHANGE PASSWORD =====
 router.post('/verify-and-change-password', async (req, res) => {
   try {

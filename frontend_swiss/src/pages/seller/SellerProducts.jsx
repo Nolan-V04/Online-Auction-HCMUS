@@ -830,7 +830,7 @@ export default function SellerProducts() {
         {ratingModal.show && (
           <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/50">
             <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 overflow-hidden border border-[#E2E8F0]">
-              <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-4 flex items-center justify-between">
+              <div className="bg-blue-600 from-blue-500 to-purple-600 px-6 py-4 flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-white flex items-center gap-2">
                   <Star className="w-5 h-5" />
                   Đánh giá người thắng
@@ -917,7 +917,7 @@ export default function SellerProducts() {
                   type="button"
                   onClick={() => handleRateWinner(ratingModal.product.proid)}
                   disabled={!ratingScore || submittingRating}
-                  className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-5 py-2.5 bg-blue-600 from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {submittingRating ? (
                     <>
