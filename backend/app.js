@@ -75,6 +75,9 @@ app.use('/api/admin', adminRouter);
 import sellerRouter from './api/seller.api.js';
 app.use('/api/seller/products', sellerRouter);
 
+import orderCompletionRouter from './api/orderCompletion.api.js';
+app.use('/api/order-completion', orderCompletionRouter);
+
 import authRouter from './routes/auth.route.js';
 app.use('/auth', authRouter);
 

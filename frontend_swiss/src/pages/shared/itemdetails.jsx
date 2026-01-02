@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Heart, Edit, X, Trash2, Upload } from 'lucide-react';
+import { Heart, Edit, X, Trash2, Upload, AlertCircle } from 'lucide-react';
 import { fetchProductById, fetchRelatedProducts } from '@/services/product.service.jsx';
 import { useAuth } from '@/contexts/AuthContext';
 import { addToWatchlist } from '@/services/watchlist.service.js';
@@ -101,6 +101,18 @@ export default function ItemDetails() {
         ]);
 
         if (!mounted) return;
+        
+        // Check if auction has ended and redirect to order completion if user is seller or winner
+        if (p.end_time && new Date(p.end_time) <= new Date() && user) {
+          const isSeller = p.seller_id === user.id;
+          const isWinner = p.highest_bidder === user.id;
+          
+          if (isSeller || isWinner) {
+            navigate(`/order-completion/${proid}`);
+            return;
+          }
+        }
+        
         setProduct(p);
         setRelated(r);
         setBidHistory(bh.bids || []);
@@ -170,6 +182,9 @@ export default function ItemDetails() {
 
   // Check if current user is the seller
   const isOwner = user && seller_id && user.id === seller_id;
+  
+  // Check if auction has ended
+  const auctionEnded = end_time && new Date(end_time) <= new Date();
 
   async function handleAddToWatchlist() {
     // If logged in, use API
@@ -593,6 +608,19 @@ export default function ItemDetails() {
 
         {/* LEFT */}
         <div className="lg:col-span-2 space-y-6">
+
+          {/* Auction Ended Banner for non-seller/winner */}
+          {auctionEnded && (!user || (user.id !== seller_id && user.id !== highest_bidder)) && (
+            <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-6 text-center">
+              <div className="flex items-center justify-center gap-2 text-yellow-800 text-xl font-bold mb-2">
+                <AlertCircle size={24} />
+                <span>Sản phẩm đã kết thúc</span>
+              </div>
+              <p className="text-yellow-700">
+                Phiên đấu giá đã kết thúc. Chỉ người bán và người thắng cuộc có thể xem chi tiết hoàn tất đơn hàng.
+              </p>
+            </div>
+          )}
 
           {/* Owner Actions */}
           {isOwner && (

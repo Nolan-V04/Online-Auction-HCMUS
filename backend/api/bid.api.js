@@ -377,8 +377,8 @@ router.post('/buy-now', requireAuth, async (req, res) => {
 
     // Record the buy now as a bid in history
     await db('bids').insert({
-      productid: productId,
-      bidderid: buyerId,
+      proid: productId,
+      userid: buyerId,
       amount: product.buy_now_price,
       bid_time: new Date()
     });
